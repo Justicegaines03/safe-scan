@@ -1,42 +1,45 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Camera, useCameraDevices } from 'react-native-vision-camera';
+import { useScanBarcodes, BarcodeFormat } from 'vision-camera-code-scanner';
+import { WebView } from 'react-native-webview';
 
 export default function Index() {
-  const [hasPermission, setHasPermission] = useState(null);
-  const [scanned, setScanned] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [scannedData, setScannedData] = useState<string | null>(null);
+  const devices = useCameraDevices();
+  const device = devices.back;
+
+  const [frameProcessor, barcodes] = useScanBarcodes([BarcodeFormat.QR_CODE], {
+    checkInverted: true,
+  });
 
   useEffect(() => {
-    const getBarCodeScannerPermissions = async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasPermission(status === 'granted');
-    };
-
-    getBarCodeScannerPermissions();
+    (async () => {
+      const status = await Camera.requestCameraPermission();
+      setHasPermission(status === 'authorized');
+    })();
   }, []);
 
-  const handleBarCodeScanned = ({ type, data }) => {
-    setScanned(true);
-    alert(`Bar code with type ${type} and data ${data} has been scanned!`);
+  useEffect(() => {
+    if (barcodes && barcodes.length > 0 && !scannedData) {
+      setScannedData(barcodes[0].displayValue || '');
+    }
+  }, [barcodes]);
+
+  const handleWebMessage = (event: any) => {
+    setScannedData(event.nativeEvent.data);
   };
 
-  if (hasPermission === null) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.text}>Requesting camera permission...</Text>
-      </View>
-    );
-  }
-
-  if (hasPermission === false) {
+  if (!hasPermission) {
     return (
       <View style={styles.container}>
         <Text style={styles.text}>No access to camera</Text>
         <TouchableOpacity 
           style={styles.button}
           onPress={async () => {
-            const { status } = await BarCodeScanner.requestPermissionsAsync();
-            setHasPermission(status === 'granted');
+            const status = await Camera.requestCameraPermission();
+            setHasPermission(status === 'authorized');
           }}
         >
           <Text style={styles.buttonText}>Grant Permission</Text>
@@ -45,25 +48,92 @@ export default function Index() {
     );
   }
 
+  if (Platform.OS === 'web') {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://unpkg.com/html5-qrcode"></script>
+        <style>
+          body { margin: 0; }
+          #reader { width: 100vw; height: 100vh; }
+          .result { position: fixed; top: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 8px; }
+        </style>
+      </head>
+      <body>
+        <div id="reader"></div>
+        <script>
+          function onScanSuccess(decodedText, decodedResult) {
+            window.ReactNativeWebView.postMessage(decodedText);
+          }
+          
+          const html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: 250 }
+          );
+          html5QrcodeScanner.render(onScanSuccess);
+        </script>
+      </body>
+      </html>
+    `;
+
+    return (
+      <View style={styles.container}>
+        <WebView
+          source={{ html: htmlContent }}
+          style={styles.webview}
+          onMessage={handleWebMessage}
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
+        />
+        {scannedData && (
+          <View style={styles.overlay}>
+            <Text style={styles.text}>Scanned: {scannedData}</Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => setScannedData(null)}
+            >
+              <Text style={styles.buttonText}>Scan Again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  if (device == null) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.text}>Loading camera...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <BarCodeScanner
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-        style={styles.scanner}
+      <Camera
+        style={styles.camera}
+        device={device}
+        isActive={!scannedData}
+        frameProcessor={frameProcessor}
+        frameProcessorFps={5}
       >
         <View style={styles.overlay}>
           <View style={styles.scanArea} />
           <Text style={styles.text}>Align QR code within the frame</Text>
-          {scanned && (
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => setScanned(false)}
-            >
-              <Text style={styles.buttonText}>Tap to Scan Again</Text>
-            </TouchableOpacity>
+          {scannedData && (
+            <View>
+              <Text style={styles.text}>Scanned: {scannedData}</Text>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => setScannedData(null)}
+              >
+                <Text style={styles.buttonText}>Scan Again</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
-      </BarCodeScanner>
+      </Camera>
     </View>
   );
 }
@@ -72,11 +142,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  scanner: {
-    ...StyleSheet.absoluteFillObject,
+  camera: {
+    flex: 1,
+  },
+  webview: {
+    flex: 1,
   },
   overlay: {
     flex: 1,
