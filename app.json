@@ -19,7 +19,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.safescan",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app needs access to the camera to scan QR codes."
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your Camera to scan QR codes."
       }
     },
     "android": {
@@ -40,14 +40,23 @@
     "plugins": [
       "expo-router",
       [
-        "react-native-vision-camera",
+        "expo-camera",
         {
-          "cameraPermissionText": "$(PRODUCT_NAME) needs access to your Camera to scan QR codes."
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to scan QR codes."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "newArchEnabled": true,
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "c4ef9fc9-7d2e-414a-a118-f9d81bd66745"
+      }
     }
   }
 }
