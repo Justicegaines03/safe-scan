@@ -1,0 +1,10 @@
+{
+  "license": "MIT",
+  "platforms": {
+  },
+  "source": {
+  },
+  "pod_target_xcconfig": {
+    "DEFINES_MODULE": "YES",
+  },
+}

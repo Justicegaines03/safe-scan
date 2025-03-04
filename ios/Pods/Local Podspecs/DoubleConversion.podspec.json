@@ -1,0 +1,15 @@
+{
+  "name": "DoubleConversion",
+  "source": {
+    "git": "https://github.com/double/double.git"
+  },
+  "pod_target_xcconfig": {
+  },
+  "license": "MIT",
+  "authors": "650 Industries, Inc.",
+  "platforms": {
+  },
+  "static_framework": true,
+  "dependencies": {
+  },
+}
