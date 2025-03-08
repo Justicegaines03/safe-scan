@@ -187,3 +187,5 @@ yarn-error.log*
 # Build files
 /build/
 /dist/
+
+.DS_Store
