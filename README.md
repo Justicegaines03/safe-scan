@@ -77,6 +77,9 @@ Inspired by the **Waymo vs. Tesla** analogy in self-driving technology, our appr
 | **11/18/24** | Defined technical features and integrated **real-time validation & threat detection**. |
 | **12/06/24** | Finalized the development timeline and **began provisional patent application**. |
 | **12/23/24** | Submitted **Provisional Patent Application (PPA)**. |
+| **01/26/25** | Joined the Oregon Innovation Challenge (OIC) at the University of Oregon
+| **02/16/25** | Partnered with a developer and a marketer for the app
+| **03/09/25** | Used the React Native Expo Environment to create a camera interface
 
 ---
 
