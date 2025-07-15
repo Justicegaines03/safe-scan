@@ -49,3 +49,27 @@ In today's digital landscape, QR codes have become an integral part of our daily
 While most modern smartphones have built-in QR code scanning capabilities, these native scanners often lack the sophisticated security features needed to protect users from these emerging threats. They typically open links automatically, without first verifying their safety, leaving users vulnerable. This is where your app idea for a secure QR code scanner becomes not just a useful tool, but a necessary one. By validating the legitimacy of QR codes before they are executed on a user's device, your app would provide a critical layer of security that is currently missing for many.
 
 The need for such an app is clear. As QR code usage continues to grow, so too will the number of associated security incidents. Your app would address a tangible and growing market need, offering users peace of mind and protecting them from the financial and personal consequences of a malicious scan. By focusing on security and user trust, you can build a reputable brand and a loyal user base in a market where existing solutions have not yet fully addressed the security concerns of the average user. This app has the potential to become an essential utility for anyone who regularly interacts with QR codes, making the digital world a safer place one scan at a time.
+
+
+## Planned Features
+
+### 🎯 Core Functionality
+
+#### Camera Scanner Tab
+- **QR Code Detection**: Real-time QR code scanning with camera integration
+- **Dual Validation System**:
+   - **Virus Total API Integration**: Automated threat detection using VirusTotal's URL scanning service
+   - **Community Safety Ratings**: User-generated safety tags (Safe/Unsafe)
+
+#### Scan History Tab
+- **Historical Records**: Complete log of all previous QR code scans
+- **Safety Status Display**: Visual indicators showing scan results (Safe/Unsafe)
+- **User Tag Management**: Ability to modify safety tags post-scan
+- **Scan Details**: Timestamp, URL, and validation results for each entry
+
+#### Backend Infrastructure
+- **Data Storage**: Persistent storage for user tags and scan history
+- **Community Database**: Shared safety ratings across all users
+- **Real-time Updates**: Dynamic safety status updates based on community feedback
+
+
