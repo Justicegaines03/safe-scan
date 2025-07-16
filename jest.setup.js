@@ -1,25 +1,15 @@
 import 'react-native-gesture-handler/jestSetup';
 
-// Mock expo modules
+// Mock expo-camera with the new API
 jest.mock('expo-camera', () => ({
-  Camera: {
-    requestCameraPermissionsAsync: jest.fn(),
-    getCameraPermissionsAsync: jest.fn(),
-    Constants: {
-      Type: {
-        back: 'back',
-        front: 'front'
-      }
-    }
-  },
-  BarCodeScanner: {
-    requestPermissionsAsync: jest.fn(),
-    getPermissionsAsync: jest.fn(),
-    Constants: {
-      BarCodeType: {
-        qr: 'qr'
-      }
-    }
+  CameraView: 'CameraView',
+  useCameraPermissions: () => [
+    { granted: true, status: 'granted' },
+    jest.fn().mockResolvedValue({ granted: true })
+  ],
+  CameraType: {
+    back: 'back',
+    front: 'front'
   }
 }));
 
@@ -46,3 +36,19 @@ global.console = {
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
+
+// Mock React Native components
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+  return {
+    ...RN,
+    Alert: {
+      alert: jest.fn(),
+    },
+    Dimensions: {
+      get: jest.fn(() => ({ width: 400, height: 800 })),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    },
+  };
+});
