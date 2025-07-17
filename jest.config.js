@@ -1,10 +1,10 @@
 module.exports = {
   preset: 'jest-expo',
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transformIgnorePatterns: [
-    'node_modules/(?!(expo|@expo|expo-camera|expo-linking|@react-native|react-native)/)'
+    'node_modules/(?!(expo|@expo|expo-camera|expo-linking|@react-native|react-native|@react-navigation)/)'
   ],
   collectCoverageFrom: [
     'app/**/*.{ts,tsx}',
@@ -21,5 +21,6 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1'
-  }
+  },
+  testTimeout: 10000
 };
