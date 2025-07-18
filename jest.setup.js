@@ -1,16 +1,186 @@
 import 'react-native-gesture-handler/jestSetup';
 
 // Mock expo-camera with the new API
+import 'jest-expo/src/preset/setup';
+import '@testing-library/jest-dom';
+
+// Mock expo-camera with SDK 53 compatibility
 jest.mock('expo-camera', () => ({
-  CameraView: jest.fn().mockImplementation(() => null),
-  useCameraPermissions: () => [
-    { granted: true, status: 'granted', canAskAgain: true },
-    jest.fn().mockResolvedValue({ granted: true })
-  ],
+  CameraView: jest.fn(({ children, ...props }) => {
+    const React = require('react');
+    return React.createElement('div', { 
+      'data-testid': 'camera-view',
+      'data-barcode-scanner-enabled': props.barcodeScannerSettings?.barcodeTypes?.length > 0,
+      ...props 
+    }, children);
+  }),
+  useCameraPermissions: jest.fn(() => [
+    { granted: true, status: 'granted' },
+    jest.fn(() => Promise.resolve({ granted: true, status: 'granted' }))
+  ]),
+  BarcodeFormat: {
+    QR_CODE: 'qr',
+    CODE_128: 'code128',
+    DATA_MATRIX: 'datamatrix'
+  },
   CameraType: {
     back: 'back',
     front: 'front'
   }
+}));
+
+// Mock expo-linking
+jest.mock('expo-linking', () => ({
+  openURL: jest.fn(() => Promise.resolve()),
+  canOpenURL: jest.fn(() => Promise.resolve(true))
+}));
+
+// Mock expo-haptics with SDK 53 API
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: {
+    Light: 'light',
+    Medium: 'medium',
+    Heavy: 'heavy',
+    Rigid: 'rigid',
+    Soft: 'soft'
+  },
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  NotificationFeedbackType: {
+    Success: 'success',
+    Warning: 'warning',
+    Error: 'error'
+  }
+}));
+
+// Mock expo-router
+jest.mock('expo-router', () => ({
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    setParams: jest.fn()
+  })),
+  useLocalSearchParams: jest.fn(() => ({})),
+  Link: jest.fn(({ children, ...props }) => {
+    const React = require('react');
+    return React.createElement('a', props, children);
+  }),
+  router: {
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    setParams: jest.fn()
+  }
+}));
+
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(() => Promise.resolve(null)),
+  setItem: jest.fn(() => Promise.resolve()),
+  removeItem: jest.fn(() => Promise.resolve()),
+  clear: jest.fn(() => Promise.resolve()),
+  getAllKeys: jest.fn(() => Promise.resolve([]))
+}));
+
+// Mock React Native components
+jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'ios',
+    select: jest.fn((obj) => obj.ios || obj.default)
+  },
+  Dimensions: {
+    get: jest.fn(() => ({ width: 375, height: 812 }))
+  },
+  Alert: {
+    alert: jest.fn()
+  },
+  View: 'View',
+  Text: 'Text',
+  TouchableOpacity: 'TouchableOpacity',
+  StyleSheet: {
+    create: jest.fn((styles) => styles),
+    hairlineWidth: 1
+  },
+  ScrollView: 'ScrollView',
+  TextInput: 'TextInput',
+  Pressable: 'Pressable',
+  Modal: 'Modal',
+  ActivityIndicator: 'ActivityIndicator'
+}));
+
+// Mock themed components
+jest.mock('@/components/ThemedText', () => {
+  const React = require('react');
+  return jest.fn(({ children, ...props }) => 
+    React.createElement('span', { 'data-testid': 'themed-text', ...props }, children)
+  );
+});
+
+jest.mock('@/components/ThemedView', () => {
+  const React = require('react');
+  return jest.fn(({ children, ...props }) => 
+    React.createElement('div', { 'data-testid': 'themed-view', ...props }, children)
+  );
+});
+
+// Mock constants
+jest.mock('@/constants/Colors', () => ({
+  light: {
+    text: '#000000',
+    background: '#ffffff',
+    tint: '#007AFF',
+    icon: '#687076',
+    tabIconDefault: '#687076',
+    tabIconSelected: '#007AFF'
+  },
+  dark: {
+    text: '#ffffff',
+    background: '#000000',
+    tint: '#007AFF',
+    icon: '#9BA1A6',
+    tabIconDefault: '#9BA1A6',
+    tabIconSelected: '#007AFF'
+  }
+}));
+
+// Mock hooks
+jest.mock('@/hooks/useThemeColor', () => 
+  jest.fn(() => '#007AFF')
+);
+
+jest.mock('@/hooks/useColorScheme', () =>
+  jest.fn(() => 'light')
+);
+
+// Global test utilities
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve('')
+  })
+);
+
+// Silence console warnings in tests
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  if (
+    typeof args[0] === 'string' &&
+    args[0].includes('Warning: ReactDOM.render is deprecated')
+  ) {
+    return;
+  }
+  originalWarn.call(console, ...args);
+};
+
+// Mock WebSocket for backend tests
+global.WebSocket = jest.fn(() => ({
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  send: jest.fn(),
+  close: jest.fn(),
+  readyState: 1 // WebSocket.OPEN
 }));
 
 jest.mock('expo-linking', () => ({

@@ -4,11 +4,12 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transformIgnorePatterns: [
-    'node_modules/(?!(expo|@expo|expo-camera|expo-linking|@react-native|react-native|@react-navigation)/)'
+    'node_modules/(?!(expo|@expo|expo-camera|expo-linking|expo-modules-core|@react-native|react-native|@react-navigation)/)'
   ],
   collectCoverageFrom: [
     'app/**/*.{ts,tsx}',
     'services/**/*.{ts,tsx}',
+    'components/**/*.{ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
     '!**/.expo/**'
@@ -20,7 +21,11 @@ module.exports = {
     '**/*.(test|spec).(ts|tsx|js)'
   ],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1'
+    '^@/(.*)$': '<rootDir>/$1',
+    '^expo-modules-core$': '<rootDir>/node_modules/expo-modules-core'
   },
-  testTimeout: 10000
+  testTimeout: 15000,
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true
 };

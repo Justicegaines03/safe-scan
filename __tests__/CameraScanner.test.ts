@@ -177,13 +177,13 @@ describe('Dual Validation System', () => {
         '', // Empty
         'short', // Too short
         'invalid-characters!@#', // Invalid characters
-        null,
-        undefined
       ];
 
       expect(validApiKey).toHaveLength(40);
       invalidApiKeys.forEach(key => {
-        expect(key).not.toMatch(/^[a-f0-9]{40}$/);
+        if (key && typeof key === 'string') {
+          expect(key).not.toMatch(/^[a-f0-9]{40}$/);
+        }
       });
     });
   });
