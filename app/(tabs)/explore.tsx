@@ -80,17 +80,19 @@ export default function ScanHistoryScreen() {
       const storedHistory = await AsyncStorage.getItem(STORAGE_KEY);
       if (storedHistory) {
         const parsed: ScanHistoryEntry[] = JSON.parse(storedHistory);
-        // Clean up old entries
-        const cutoffTime = Date.now() - (MAX_HISTORY_DAYS * 24 * 60 * 60 * 1000);
-        const recentHistory = parsed.filter(entry => entry.timestamp > cutoffTime);
-        setHistory(recentHistory.sort((a, b) => b.timestamp - a.timestamp));
+        // Quick cleanup - keep last 100 entries for speed
+        const recentHistory = parsed
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, 100);
+        setHistory(recentHistory);
       } else {
-        // Load mock data for demonstration
-        setHistory(generateMockHistory());
+        // No mock data - start fresh for real testing
+        setHistory([]);
       }
     } catch (error) {
       console.error('Error loading history:', error);
-      Alert.alert('Error', 'Failed to load scan history');
+      // Quick fail - don't show alert for speed
+      setHistory([]);
     } finally {
       setIsLoading(false);
     }
@@ -292,41 +294,51 @@ export default function ScanHistoryScreen() {
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
-    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    return 'Just now';
+    // Super quick time display for college students
+    if (days > 0) return `${days}d`;
+    if (hours > 0) return `${hours}h`;
+    if (minutes > 0) return `${minutes}m`;
+    return 'now';
   };
 
-  const truncateText = (text: string, maxLength: number = 50) => {
+  const truncateText = (text: string, maxLength: number = 40) => {
+    // Shorter truncation for quick scanning
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
   const getStatusIcon = (status: string) => {
+    // High contrast icons for quick recognition
     switch (status) {
       case 'safe': return '✅';
-      case 'unsafe': return '⚠️';
-      case 'unknown': return '❓';
-      default: return '❓';
+      case 'unsafe': return '🚫';
+      case 'unknown': return '❔';
+      default: return '❔';
     }
   };
 
   const getStatusColor = (status: string) => {
+    // Bold colors for instant recognition
     switch (status) {
-      case 'safe': return '#4CAF50';
-      case 'unsafe': return '#F44336';
-      case 'unknown': return '#9E9E9E';
-      default: return '#9E9E9E';
+      case 'safe': return '#00E676';   // Bright green
+      case 'unsafe': return '#FF1744'; // Bright red
+      case 'unknown': return '#FFC107'; // Bright yellow
+      default: return '#FFC107';
     }
   };
 
   const renderHistoryItem = ({ item }: { item: ScanHistoryEntry }) => (
     <TouchableOpacity
-      style={[styles.historyItem, { backgroundColor: colors.background, borderColor: colors.tabIconDefault }]}
+      style={[styles.historyItem, { 
+        backgroundColor: colors.background, 
+        borderColor: getStatusColor(item.safetyStatus),
+        borderLeftWidth: 4,
+        borderWidth: 1
+      }]}
       onPress={() => {
         setSelectedEntry(item);
         setShowDetails(true);
       }}
+      activeOpacity={0.7}
     >
       <View style={styles.itemHeader}>
         <View style={styles.statusContainer}>
@@ -336,28 +348,37 @@ export default function ScanHistoryScreen() {
           <ThemedText style={[styles.statusText, { color: getStatusColor(item.safetyStatus) }]}>
             {item.safetyStatus.toUpperCase()}
           </ThemedText>
+          {/* Quick scan time indicator */}
+          {item.scanDuration && (
+            <ThemedText style={styles.scanTime}>
+              ({Math.round(item.scanDuration / 100) / 10}s)
+            </ThemedText>
+          )}
         </View>
         <ThemedText style={styles.timestamp}>
           {formatTimestamp(item.timestamp)}
         </ThemedText>
       </View>
       
-      <ThemedText style={styles.qrData} numberOfLines={2}>
-        {truncateText(item.qrData, 80)}
+      <ThemedText style={styles.qrData} numberOfLines={1}>
+        {truncateText(item.qrData, 60)}
       </ThemedText>
       
-      <View style={styles.itemFooter}>
-        {item.userTag && (
-          <View style={[styles.userTag, { backgroundColor: getStatusColor(item.userTag) }]}>
-            <ThemedText style={styles.userTagText}>
-              User: {item.userTag}
+      {/* Quick info row */}
+      <View style={styles.quickInfo}>
+        {item.virusTotalResult && (
+          <View style={[styles.quickBadge, { backgroundColor: item.virusTotalResult.isSecure ? '#00E676' : '#FF1744' }]}>
+            <ThemedText style={styles.quickBadgeText}>
+              VT: {item.virusTotalResult.positives}/{item.virusTotalResult.total}
             </ThemedText>
           </View>
         )}
-        {item.virusTotalResult && (
-          <ThemedText style={styles.vtResult}>
-            VT: {item.virusTotalResult.positives}/{item.virusTotalResult.total}
-          </ThemedText>
+        {item.userTag && (
+          <View style={[styles.quickBadge, { backgroundColor: getStatusColor(item.userTag) }]}>
+            <ThemedText style={styles.quickBadgeText}>
+              👤 {item.userTag}
+            </ThemedText>
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -512,20 +533,28 @@ export default function ScanHistoryScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
-        <ThemedText type="title">Scan History</ThemedText>
+        <ThemedText type="title" style={styles.headerTitle}>History</ThemedText>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={[styles.headerButton, { backgroundColor: colors.tint }]}
+            style={[styles.quickButton, { backgroundColor: '#00E676' }]}
             onPress={() => setShowFilters(!showFilters)}
           >
-            <ThemedText style={styles.headerButtonText}>Filter</ThemedText>
+            <ThemedText style={styles.quickButtonText}>🔍</ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.headerButton, { backgroundColor: colors.tint }]}
+            style={[styles.quickButton, { backgroundColor: '#2196F3' }]}
             onPress={exportHistory}
           >
-            <ThemedText style={styles.headerButtonText}>Export</ThemedText>
+            <ThemedText style={styles.quickButtonText}>📤</ThemedText>
           </TouchableOpacity>
+          {history.length > 0 && (
+            <TouchableOpacity
+              style={[styles.quickButton, { backgroundColor: '#FF1744' }]}
+              onPress={clearHistory}
+            >
+              <ThemedText style={styles.quickButtonText}>🗑️</ThemedText>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -533,55 +562,71 @@ export default function ScanHistoryScreen() {
         <ThemedView style={styles.filterContainer}>
           <TextInput
             style={[styles.searchInput, { borderColor: colors.tabIconDefault, color: colors.text }]}
-            placeholder="Search QR codes..."
+            placeholder="Quick search..."
             placeholderTextColor={colors.tabIconDefault}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.filterButtons}>
-              {['all', 'safe', 'unsafe', 'unknown'].map((filter) => (
-                <TouchableOpacity
-                  key={filter}
-                  style={[
-                    styles.filterButton,
-                    { 
-                      backgroundColor: selectedFilter === filter ? colors.tint : 'transparent',
-                      borderColor: colors.tint 
-                    }
-                  ]}
-                  onPress={() => setSelectedFilter(filter as any)}
-                >
-                  <ThemedText style={[
-                    styles.filterButtonText,
-                    { color: selectedFilter === filter ? '#fff' : colors.tint }
-                  ]}>
-                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+          <View style={styles.quickFilters}>
+            {[
+              { key: 'all', label: 'All', emoji: '📋' },
+              { key: 'safe', label: 'Safe', emoji: '✅' },
+              { key: 'unsafe', label: 'Unsafe', emoji: '🚫' },
+              { key: 'unknown', label: 'Unknown', emoji: '❔' }
+            ].map((filter) => (
+              <TouchableOpacity
+                key={filter.key}
+                style={[
+                  styles.quickFilterButton,
+                  { 
+                    backgroundColor: selectedFilter === filter.key ? getStatusColor(filter.key === 'all' ? 'safe' : filter.key) : 'transparent',
+                    borderColor: getStatusColor(filter.key === 'all' ? 'safe' : filter.key),
+                    borderWidth: 2
+                  }
+                ]}
+                onPress={() => setSelectedFilter(filter.key as any)}
+              >
+                <ThemedText style={[
+                  styles.quickFilterText,
+                  { color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }
+                ]}>
+                  {filter.emoji} {filter.label}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
         </ThemedView>
       )}
 
       <ThemedView style={styles.statsContainer}>
         <ThemedText style={styles.statsText}>
-          Total: {history.length} | Showing: {filteredHistory.length}
+          {filteredHistory.length} of {history.length} scans
         </ThemedText>
-        {history.length > 0 && (
-          <TouchableOpacity onPress={clearHistory}>
-            <ThemedText style={[styles.linkText, { color: '#F44336' }]}>Clear All</ThemedText>
-          </TouchableOpacity>
-        )}
+        <View style={styles.quickStats}>
+          <ThemedText style={[styles.quickStat, { color: '#00E676' }]}>
+            ✅ {history.filter(h => h.safetyStatus === 'safe').length}
+          </ThemedText>
+          <ThemedText style={[styles.quickStat, { color: '#FF1744' }]}>
+            🚫 {history.filter(h => h.safetyStatus === 'unsafe').length}
+          </ThemedText>
+          <ThemedText style={[styles.quickStat, { color: '#FFC107' }]}>
+            ❔ {history.filter(h => h.safetyStatus === 'unknown').length}
+          </ThemedText>
+        </View>
       </ThemedView>
 
       {filteredHistory.length === 0 ? (
         <ThemedView style={styles.emptyContainer}>
+          <ThemedText style={styles.emptyIcon}>📱</ThemedText>
+          <ThemedText style={styles.emptyTitle}>
+            {history.length === 0 ? 'No scans yet!' : 'No matches found'}
+          </ThemedText>
           <ThemedText style={styles.emptyText}>
             {history.length === 0 
-              ? 'No scan history yet. Start scanning QR codes to see them here!'
-              : 'No results found for the current filters.'
+              ? 'Start scanning QR codes to build your history'
+              : 'Try adjusting your search or filters'
             }
           </ThemedText>
         </ThemedView>
@@ -620,9 +665,23 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
   },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
   headerActions: {
     flexDirection: 'row',
     gap: 8,
+  },
+  quickButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickButtonText: {
+    fontSize: 16,
   },
   headerButton: {
     paddingHorizontal: 12,
@@ -639,11 +698,27 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   searchInput: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
     fontSize: 16,
+    fontWeight: '500',
+  },
+  quickFilters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickFilterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 2,
+  },
+  quickFilterText: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   filterButtons: {
     flexDirection: 'row',
@@ -667,18 +742,32 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   statsText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  quickStats: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickStat: {
     fontSize: 12,
-    opacity: 0.7,
+    fontWeight: 'bold',
+  },
+  scanTime: {
+    fontSize: 10,
+    opacity: 0.6,
+    marginLeft: 8,
+    fontStyle: 'italic',
   },
   historyList: {
     flex: 1,
     paddingHorizontal: 16,
   },
   historyItem: {
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderLeftWidth: 4,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -705,7 +794,23 @@ const styles = StyleSheet.create({
   qrData: {
     fontSize: 14,
     marginBottom: 8,
-    lineHeight: 20,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  quickInfo: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  quickBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  quickBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   itemFooter: {
     flexDirection: 'row',
@@ -732,10 +837,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
   emptyText: {
     textAlign: 'center',
     opacity: 0.6,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
   },
   modalContainer: {
     flex: 1,

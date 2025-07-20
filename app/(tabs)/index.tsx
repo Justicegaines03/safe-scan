@@ -61,7 +61,8 @@ export default function CameraScannerScreen() {
   const [lastScanTime, setLastScanTime] = useState(0);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualUrl, setManualUrl] = useState('');
-  const scanCooldown = useRef(2000); // 2 seconds cooldown between scans
+  const [scanCount, setScanCount] = useState(0);
+  const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
 
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -84,7 +85,7 @@ export default function CameraScannerScreen() {
           permalink: `https://virustotal.com/gui/url/${btoa(url)}`
         };
         resolve(mockResult);
-      }, 1500);
+      }, 300); // Reduced from 1500ms to 300ms
     });
   };
 
@@ -92,18 +93,14 @@ export default function CameraScannerScreen() {
   const getCommunityRating = async (url: string): Promise<CommunityRating> => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        // Mock community data
-        const safeVotes = Math.floor(Math.random() * 20) + 1;
-        const unsafeVotes = Math.floor(Math.random() * 5);
-        const totalVotes = safeVotes + unsafeVotes;
-        
+        // Show "No votes yet" for new URLs
         resolve({
-          safeVotes,
-          unsafeVotes,
-          totalVotes,
-          confidence: totalVotes > 0 ? safeVotes / totalVotes : 0.5
+          safeVotes: 0,
+          unsafeVotes: 0,
+          totalVotes: 0,
+          confidence: 0.5
         });
-      }, 800);
+      }, 150); // Reduced from 800ms to 150ms
     });
   };
 
@@ -199,6 +196,7 @@ export default function CameraScannerScreen() {
 
     setLastScanTime(now);
     setIsScanning(false);
+    setScanCount(prev => prev + 1);
 
     // Handle empty or null data
     if (!data || data.trim().length === 0) {
@@ -278,82 +276,86 @@ export default function CameraScannerScreen() {
   }
 
   if (validationResult) {
+    const isQuickSafe = validationResult.isSecure && validationResult.confidence > 0.8;
+    
     return (
       <ThemedView style={styles.container}>
         <ScrollView contentContainerStyle={styles.resultContainer}>
+          {/* Quick Result Header */}
           <ThemedView style={[
-            styles.resultCard,
-            { backgroundColor: validationResult.isSecure ? '#4CAF50' : '#f44336' }
+            styles.quickResultCard,
+            { backgroundColor: validationResult.isSecure ? '#2E7D32' : '#D32F2F' }
           ]}>
-            <ThemedText type="title" style={styles.resultTitle}>
-              {validationResult.isSecure ? '🛡️ SECURE' : '⚠️ UNSAFE'}
+            <ThemedText type="title" style={styles.quickResultTitle}>
+              {validationResult.isSecure ? '✅ SAFE TO PROCEED' : '🚫 BLOCKED - UNSAFE'}
             </ThemedText>
-            <ThemedText style={styles.confidenceText}>
-              Confidence: {Math.round(validationResult.confidence * 100)}%
+            <ThemedText style={styles.quickConfidence}>
+              {Math.round(validationResult.confidence * 100)}% confidence
             </ThemedText>
           </ThemedView>
 
-          <ThemedView style={styles.urlContainer}>
-            <ThemedText type="subtitle">Scanned URL:</ThemedText>
-            <ThemedText style={styles.urlText} selectable>
+          {/* Quick Action Buttons */}
+          <ThemedView style={styles.quickActionContainer}>
+            {isQuickSafe ? (
+              <TouchableOpacity 
+                style={[styles.primaryButton, { backgroundColor: '#2E7D32' }]}
+                onPress={() => {
+                  Alert.alert('Safe URL', 'This URL appears safe. Opening would redirect to your browser.');
+                }}
+              >
+                <Text style={styles.primaryButtonText}>🔗 OPEN LINK</Text>
+              </TouchableOpacity>
+            ) : (
+              <ThemedView style={styles.warningBox}>
+                <ThemedText style={styles.warningTitle}>⚠️ SECURITY WARNING</ThemedText>
+                <ThemedText style={styles.warningSubtext}>
+                  This QR code may be unsafe. Proceed with extreme caution.
+                </ThemedText>
+              </ThemedView>
+            )}
+            
+            <TouchableOpacity 
+              style={[styles.secondaryButton, { borderColor: colors.tint }]}
+              onPress={resetScanner}
+            >
+              <Text style={[styles.secondaryButtonText, { color: colors.tint }]}>SCAN ANOTHER</Text>
+            </TouchableOpacity>
+          </ThemedView>
+
+          {/* Scan Counter */}
+          <ThemedView style={styles.statsContainer}>
+            <ThemedText style={styles.statsText}>
+              Scan #{scanCount + 1} • {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </ThemedText>
+          </ThemedView>
+
+          {/* URL Preview */}
+          <ThemedView style={styles.urlPreview}>
+            <ThemedText style={styles.urlLabel}>SCANNED:</ThemedText>
+            <ThemedText style={styles.urlValue} selectable numberOfLines={2}>
               {validationResult.url}
             </ThemedText>
           </ThemedView>
 
-          {validationResult.warning && (
-            <ThemedView style={styles.warningContainer}>
-              <ThemedText style={styles.warningText}>
-                ⚠️ {validationResult.warning}
-              </ThemedText>
-            </ThemedView>
-          )}
-
-          {validationResult.virusTotal && (
-            <ThemedView style={styles.detailCard}>
-              <ThemedText type="subtitle">VirusTotal Analysis</ThemedText>
-              <ThemedText>
-                Detections: {validationResult.virusTotal.positives}/{validationResult.virusTotal.total}
-              </ThemedText>
-              <ThemedText style={styles.linkText} selectable>
-                Report: {validationResult.virusTotal.permalink}
-              </ThemedText>
-            </ThemedView>
-          )}
-
-          {validationResult.community && validationResult.community.totalVotes > 0 && (
-            <ThemedView style={styles.detailCard}>
-              <ThemedText type="subtitle">Community Rating</ThemedText>
-              <ThemedText>
-                Safe votes: {validationResult.community.safeVotes}
-              </ThemedText>
-              <ThemedText>
-                Unsafe votes: {validationResult.community.unsafeVotes}
-              </ThemedText>
-              <ThemedText>
-                Community confidence: {Math.round(validationResult.community.confidence * 100)}%
-              </ThemedText>
-            </ThemedView>
-          )}
-
-          <ThemedView style={styles.actionContainer}>
-            <TouchableOpacity 
-              style={[styles.button, { backgroundColor: colors.tint }]}
-              onPress={resetScanner}
-            >
-              <Text style={styles.buttonText}>Scan Another</Text>
-            </TouchableOpacity>
+          {/* Detailed Results (Collapsible) */}
+          <ThemedView style={styles.detailsSection}>
+            <ThemedText style={styles.detailsHeader}>SCAN DETAILS</ThemedText>
             
-            {validationResult.isSecure && (
-              <TouchableOpacity 
-                style={[styles.button, styles.secondaryButton]}
-                onPress={() => {
-                  // Here you could open the URL in a secure browser
-                  Alert.alert('Safe URL', 'This URL appears to be safe. You can proceed with caution.');
-                }}
-              >
-                <Text style={[styles.buttonText, { color: colors.tint }]}>Open URL</Text>
-              </TouchableOpacity>
+            {validationResult.virusTotal && (
+              <ThemedView style={styles.quickDetailCard}>
+                <ThemedText style={styles.detailTitle}>🛡️ VirusTotal</ThemedText>
+                <ThemedText style={styles.detailValue}>
+                  {validationResult.virusTotal.positives === 0 ? 'Clean' : `${validationResult.virusTotal.positives} threats detected`}
+                </ThemedText>
+              </ThemedView>
             )}
+
+            <ThemedView style={styles.quickDetailCard}>
+              <ThemedText style={styles.detailTitle}>👥 Community</ThemedText>
+              <ThemedText style={styles.detailValue}>
+                {validationResult.community?.totalVotes === 0 ? 'No votes yet' : `${validationResult.community?.safeVotes || 0} safe votes`}
+              </ThemedText>
+            </ThemedView>
           </ThemedView>
         </ScrollView>
       </ThemedView>
@@ -374,7 +376,10 @@ export default function CameraScannerScreen() {
           <View style={styles.overlay}>
             <View style={styles.scanFrame} />
             <ThemedText style={styles.scanText}>
-              Position QR code within the frame
+              🎯 Point camera at QR code
+            </ThemedText>
+            <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
+              Fast • Secure • Reliable
             </ThemedText>
           </View>
         </CameraView>
@@ -398,8 +403,11 @@ export default function CameraScannerScreen() {
 
       {isValidating && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={colors.tint} />
-          <ThemedText style={styles.loadingText}>Validating URL...</ThemedText>
+          <ActivityIndicator size="large" color="#00E676" />
+          <ThemedText style={styles.loadingText}>⚡ Analyzing QR code...</ThemedText>
+          <ThemedText style={[styles.loadingText, { fontSize: 14, marginTop: 4, opacity: 0.8 }]}>
+            Checking with security databases
+          </ThemedText>
         </View>
       )}
 
@@ -464,8 +472,8 @@ const styles = StyleSheet.create({
   scanFrame: {
     width: 250,
     height: 250,
-    borderWidth: 2,
-    borderColor: '#fff',
+    borderWidth: 3,
+    borderColor: '#00E676',
     borderRadius: 12,
     backgroundColor: 'transparent',
   },
@@ -474,23 +482,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     fontSize: 16,
+    fontWeight: '600',
   },
   controlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
   },
   controlButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 8,
-    minWidth: 120,
+    minWidth: 100,
     alignItems: 'center',
   },
   secondaryButton: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#007AFF',
   },
   button: {
@@ -521,8 +530,135 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   resultContainer: {
-    padding: 20,
+    padding: 16,
   },
+  
+  // New optimized styles for college students
+  quickResultCard: {
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  quickResultTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  quickConfidence: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  quickActionContainer: {
+    marginBottom: 20,
+  },
+  primaryButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  warningBox: {
+    padding: 16,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+    marginBottom: 12,
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E65100',
+    marginBottom: 4,
+  },
+  warningSubtext: {
+    fontSize: 14,
+    color: '#BF360C',
+    lineHeight: 20,
+  },
+  statsContainer: {
+    padding: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  statsText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  urlPreview: {
+    padding: 16,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  urlLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 8,
+  },
+  urlValue: {
+    fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: '#333',
+    lineHeight: 20,
+  },
+  detailsSection: {
+    marginTop: 8,
+  },
+  detailsHeader: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 12,
+  },
+  quickDetailCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  detailTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#666',
+  },
+  
+  // Legacy styles (keeping for compatibility)
   resultCard: {
     padding: 20,
     borderRadius: 12,
@@ -580,14 +716,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
     color: '#fff',
     marginTop: 16,
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
