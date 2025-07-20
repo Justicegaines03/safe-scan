@@ -183,6 +183,19 @@ global.WebSocket = jest.fn(() => ({
   readyState: 1 // WebSocket.OPEN
 }));
 
+// Mock performance API for timing tests
+global.performance = {
+  now: jest.fn(() => Date.now()),
+  mark: jest.fn(),
+  measure: jest.fn(),
+  clearMarks: jest.fn(),
+  clearMeasures: jest.fn(),
+  getEntriesByName: jest.fn(() => []),
+  getEntriesByType: jest.fn(() => []),
+  navigation: {},
+  timing: {}
+};
+
 jest.mock('expo-linking', () => ({
   openURL: jest.fn(),
   canOpenURL: jest.fn(),

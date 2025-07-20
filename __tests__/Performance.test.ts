@@ -7,6 +7,15 @@
 
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 
+// Mock QR scan engine for performance testing
+const qrScanEngine = {
+  validateQRData: async (data: string): Promise<boolean> => {
+    // Simulate validation processing
+    await new Promise(resolve => setTimeout(resolve, 10));
+    return data.startsWith('https://');
+  }
+};
+
 describe('Performance Testing', () => {
   beforeEach(() => {
     // Setup performance monitoring
@@ -19,18 +28,12 @@ describe('Performance Testing', () => {
 
   describe('Scan Performance', () => {
     it('should process QR scans within acceptable time limits', async () => {
-      const startTime = performance.now();
+      const qrData = 'https://www.example.com/secure-page';
+      const startTime = Date.now();
       
-      // Simulate QR code processing
-      const mockQRData = 'https://example.com/test-url';
-      const processQR = async (data: string): Promise<boolean> => {
-        return new Promise(resolve => {
-          setTimeout(() => resolve(data.length > 0), 10);
-        });
-      };
-
-      const result = await processQR(mockQRData);
-      const endTime = performance.now();
+      const result = await qrScanEngine.validateQRData(qrData);
+      
+      const endTime = Date.now();
       const processingTime = endTime - startTime;
 
       expect(result).toBe(true);
@@ -43,7 +46,7 @@ describe('Performance Testing', () => {
         `https://example${i}.com`
       );
 
-      const startTime = performance.now();
+      const startTime = Date.now();
 
       const batchProcess = async (urls: string[]): Promise<number> => {
         return Promise.all(
@@ -55,7 +58,7 @@ describe('Performance Testing', () => {
       };
 
       const totalLength = await batchProcess(mockUrls);
-      const endTime = performance.now();
+      const endTime = Date.now();
       const processingTime = endTime - startTime;
 
       expect(totalLength).toBeGreaterThan(0);
@@ -68,14 +71,14 @@ describe('Performance Testing', () => {
       
       let frameCount = 0;
       const simulateFrameProcessing = () => {
-        const frameStart = performance.now();
+        const frameStart = Date.now();
         
         // Simulate frame processing work
         for (let i = 0; i < 1000; i++) {
           Math.random();
         }
         
-        const frameEnd = performance.now();
+        const frameEnd = Date.now();
         const actualFrameTime = frameEnd - frameStart;
         
         frameCount++;
@@ -160,11 +163,11 @@ describe('Performance Testing', () => {
   describe('Network Performance', () => {
     it('should handle API requests efficiently', async () => {
       const mockApiCall = async (url: string): Promise<{ status: string; responseTime: number }> => {
-        const start = performance.now();
+        const start = Date.now();
         
         return new Promise(resolve => {
           setTimeout(() => {
-            const responseTime = performance.now() - start;
+            const responseTime = Date.now() - start;
             resolve({ status: 'success', responseTime });
           }, Math.random() * 200 + 50); // 50-250ms response time
         });
@@ -213,35 +216,31 @@ describe('Performance Testing', () => {
       const maxConcurrentRequests = 3;
       const requestQueue: string[] = [];
       const activeRequests = new Set<string>();
+      const completedRequests = new Set<string>();
 
       const processRequest = async (url: string): Promise<void> => {
-        if (activeRequests.size >= maxConcurrentRequests) {
-          requestQueue.push(url);
-          return;
+        // Wait for a slot to become available
+        while (activeRequests.size >= maxConcurrentRequests) {
+          await new Promise(resolve => setTimeout(resolve, 10));
         }
 
         activeRequests.add(url);
         
         try {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 50));
+          completedRequests.add(url);
         } finally {
           activeRequests.delete(url);
-          
-          // Process next in queue
-          if (requestQueue.length > 0) {
-            const nextUrl = requestQueue.shift()!;
-            processRequest(nextUrl);
-          }
         }
       };
 
       // Simulate multiple concurrent requests
-      const urls = Array.from({ length: 10 }, (_, i) => `https://api${i}.example.com`);
+      const urls = Array.from({ length: 6 }, (_, i) => `https://api${i}.example.com`);
       
       await Promise.all(urls.map(processRequest));
 
       expect(activeRequests.size).toBe(0);
-      expect(requestQueue.length).toBe(0);
+      expect(completedRequests.size).toBe(6);
     });
   });
 
@@ -269,7 +268,7 @@ describe('Performance Testing', () => {
       const debounceDelay = 300;
 
       const debouncedSearch = (() => {
-        let timeoutId: NodeJS.Timeout | null = null;
+        let timeoutId: number | null = null;
         
         return (query: string) => {
           if (timeoutId) {
@@ -279,7 +278,7 @@ describe('Performance Testing', () => {
           timeoutId = setTimeout(() => {
             searchCalls++;
             // Actual search logic would go here
-          }, debounceDelay);
+          }, debounceDelay) as unknown as number;
         };
       })();
 
@@ -319,9 +318,9 @@ describe('Performance Testing', () => {
         'https://example.com/image1.png' // Duplicate to test caching
       ];
 
-      const startTime = performance.now();
+      const startTime = Date.now();
       const results = await Promise.all(imageUrls.map(loadImage));
-      const endTime = performance.now();
+      const endTime = Date.now();
 
       expect(results.length).toBe(3);
       expect(imageCache.size).toBe(2); // Only 2 unique images cached

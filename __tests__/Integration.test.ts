@@ -94,7 +94,12 @@ describe('SafeScan Integration Tests', () => {
     };
 
     mockCommunity = {
-      getRating: jest.fn(),
+      getRating: jest.fn().mockResolvedValue({
+        confidence: 0.8,
+        safeVotes: 8,
+        unsafeVotes: 2,
+        totalVotes: 10
+      }),
       submitRating: jest.fn().mockResolvedValue(true),
       subscribeToUpdates: jest.fn()
     };
@@ -367,6 +372,7 @@ describe('SafeScan Integration Tests', () => {
           // Fallback to community rating only
           const communityRating = await app.community.getRating(scannedData);
           expect(communityRating).toBeDefined();
+          expect(communityRating).toHaveProperty('confidence');
         }
       }
 
