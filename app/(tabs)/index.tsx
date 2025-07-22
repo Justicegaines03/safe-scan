@@ -376,10 +376,9 @@ export default function CameraScannerScreen() {
           <View style={styles.overlay}>
             <View style={styles.scanFrame} />
             <ThemedText style={styles.scanText}>
-              🎯 Point camera at QR code
+              Point camera at QR code
             </ThemedText>
             <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
-              Fast • Secure • Reliable
             </ThemedText>
           </View>
         </CameraView>

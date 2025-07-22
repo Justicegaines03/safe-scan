@@ -571,10 +571,10 @@ export default function ScanHistoryScreen() {
           />
           <View style={styles.quickFilters}>
             {[
-              { key: 'all', label: 'All', emoji: '📋' },
-              { key: 'safe', label: 'Safe', emoji: '✅' },
-              { key: 'unsafe', label: 'Unsafe', emoji: '🚫' },
-              { key: 'unknown', label: 'Unknown', emoji: '❔' }
+              { key: 'all', label: 'All'},
+              { key: 'safe', label: 'Safe'},
+              { key: 'unsafe', label: 'Unsafe'},
+              { key: 'warning', label: 'Warning'}
             ].map((filter) => (
               <TouchableOpacity
                 key={filter.key}
@@ -606,13 +606,13 @@ export default function ScanHistoryScreen() {
         </ThemedText>
         <View style={styles.quickStats}>
           <ThemedText style={[styles.quickStat, { color: '#00E676' }]}>
-            ✅ {history.filter(h => h.safetyStatus === 'safe').length}
+            Safe {history.filter(h => h.safetyStatus === 'safe').length}
           </ThemedText>
           <ThemedText style={[styles.quickStat, { color: '#FF1744' }]}>
-            🚫 {history.filter(h => h.safetyStatus === 'unsafe').length}
+            Unsafe {history.filter(h => h.safetyStatus === 'unsafe').length}
           </ThemedText>
           <ThemedText style={[styles.quickStat, { color: '#FFC107' }]}>
-            ❔ {history.filter(h => h.safetyStatus === 'unknown').length}
+            Warning {history.filter(h => h.safetyStatus === 'unknown').length}
           </ThemedText>
         </View>
       </ThemedView>
