@@ -13,6 +13,7 @@ import {
   Share,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SymbolView } from 'expo-symbols';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -536,23 +537,41 @@ export default function ScanHistoryScreen() {
         <ThemedText type="title" style={styles.headerTitle}>History</ThemedText>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={[styles.quickButton, { backgroundColor: '#00E676' }]}
+            style={[styles.quickButton, {}]}
             onPress={() => setShowFilters(!showFilters)}
           >
-            <ThemedText style={styles.quickButtonText}>🔍</ThemedText>
+            <SymbolView
+              name="magnifyingglass"
+              size={24}
+              type="monochrome"
+              tintColor="#007AFF"
+              fallback={<ThemedText style={styles.quickButtonText}>🔍</ThemedText>}
+            />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.quickButton, { backgroundColor: '#2196F3' }]}
+            style={[styles.quickButton, {}]}
             onPress={exportHistory}
           >
-            <ThemedText style={styles.quickButtonText}>📤</ThemedText>
+            <SymbolView
+              name="square.and.arrow.up"
+              size={24}
+              type="monochrome"
+              tintColor="#007AFF"
+              fallback={<ThemedText style={styles.quickButtonText}>📤</ThemedText>}
+            />
           </TouchableOpacity>
           {history.length > 0 && (
             <TouchableOpacity
-              style={[styles.quickButton, { backgroundColor: '#FF1744' }]}
+              style={[styles.quickButton, {}]}
               onPress={clearHistory}
             >
-              <ThemedText style={styles.quickButtonText}>🗑️</ThemedText>
+              <SymbolView
+                name="trash.fill"
+                size={24}
+                type="monochrome"
+                tintColor="#007AFF"
+                fallback={<ThemedText style={styles.quickButtonText}>🗑️</ThemedText>}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -571,10 +590,10 @@ export default function ScanHistoryScreen() {
           />
           <View style={styles.quickFilters}>
             {[
-              { key: 'all', label: 'All'},
-              { key: 'safe', label: 'Safe'},
-              { key: 'unsafe', label: 'Unsafe'},
-              { key: 'warning', label: 'Warning'}
+              { key: 'all', label: 'All', symbol: 'list.bullet' as const },
+              { key: 'safe', label: 'Safe', symbol: 'checkmark.shield.fill' as const },
+              { key: 'unsafe', label: 'Unsafe', symbol: 'xmark.shield.fill' as const },
+              { key: 'unknown', label: 'Unknown', symbol: 'questionmark.circle.fill' as const }
             ].map((filter) => (
               <TouchableOpacity
                 key={filter.key}
@@ -588,12 +607,25 @@ export default function ScanHistoryScreen() {
                 ]}
                 onPress={() => setSelectedFilter(filter.key as any)}
               >
-                <ThemedText style={[
-                  styles.quickFilterText,
-                  { color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }
-                ]}>
-                  {filter.emoji} {filter.label}
-                </ThemedText>
+                <View style={styles.filterButtonContent}>
+                  <SymbolView
+                    name={filter.symbol}
+                    size={16}
+                    type="hierarchical"
+                    tintColor={selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key)}
+                    fallback={
+                      <ThemedText style={{ color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }}>
+                        {filter.key === 'all' ? '📋' : filter.key === 'safe' ? '✅' : filter.key === 'unsafe' ? '🚫' : '❔'}
+                      </ThemedText>
+                    }
+                  />
+                  <ThemedText style={[
+                    styles.quickFilterText,
+                    { color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }
+                  ]}>
+                    {filter.label}
+                  </ThemedText>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -715,6 +747,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 2,
+  },
+  filterButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   quickFilterText: {
     fontSize: 14,

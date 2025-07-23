@@ -10,8 +10,16 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  Platform
+  Platform,
+  Linking
 } from 'react-native';
+import { PanGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring, 
+  runOnJS 
+} from 'react-native-reanimated';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -239,6 +247,65 @@ export default function CameraScannerScreen() {
     setCameraType(current => current === 'back' ? 'front' : 'back');
   };
 
+  const openLink = async (url: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'Cannot open this URL');
+      }
+    } catch (error) {
+      console.error('Error opening URL:', error);
+      Alert.alert('Error', 'Failed to open URL');
+    }
+  };
+
+  const translateX = useSharedValue(0);
+  const swipeThreshold = 100;
+
+  const handleSwipeGesture = (event: any) => {
+    'worklet';
+    const { translationX, state } = event.nativeEvent;
+    
+    if (state === State.ACTIVE) {
+      translateX.value = translationX;
+    } else if (state === State.END) {
+      if (translationX > swipeThreshold) {
+        // Swipe right - Open link
+        translateX.value = withSpring(0);
+        if (validationResult) {
+          runOnJS(openLink)(validationResult.url);
+        }
+      } else if (translationX < -swipeThreshold) {
+        // Swipe left - Continue scanning (acknowledge risk)
+        translateX.value = withSpring(0);
+        runOnJS(handleSwipeLeftAcknowledge)();
+      } else {
+        // Snap back to center
+        translateX.value = withSpring(0);
+      }
+    }
+  };
+
+  const handleSwipeLeftAcknowledge = () => {
+    if (!validationResult?.isSecure) {
+      Alert.alert(
+        'Security Risk Acknowledged',
+        'You have acknowledged the security risk and chosen not to proceed with this QR code.',
+        [{ text: 'OK', onPress: resetScanner }]
+      );
+    } else {
+      resetScanner();
+    }
+  };
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+    };
+  });
+
   if (!permission) {
     return (
       <ThemedView style={styles.container}>
@@ -279,176 +346,164 @@ export default function CameraScannerScreen() {
     const isQuickSafe = validationResult.isSecure && validationResult.confidence > 0.8;
     
     return (
-      <ThemedView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.resultContainer}>
-          {/* Quick Result Header */}
-          <ThemedView style={[
-            styles.quickResultCard,
-            { backgroundColor: validationResult.isSecure ? '#2E7D32' : '#D32F2F' }
-          ]}>
-            <ThemedText type="title" style={styles.quickResultTitle}>
-              {validationResult.isSecure ? '✅ SAFE TO PROCEED' : '🚫 BLOCKED - UNSAFE'}
-            </ThemedText>
-            <ThemedText style={styles.quickConfidence}>
-              {Math.round(validationResult.confidence * 100)}% confidence
-            </ThemedText>
-          </ThemedView>
-
-          {/* Quick Action Buttons */}
-          <ThemedView style={styles.quickActionContainer}>
-            {isQuickSafe ? (
-              <TouchableOpacity 
-                style={[styles.primaryButton, { backgroundColor: '#2E7D32' }]}
-                onPress={() => {
-                  Alert.alert('Safe URL', 'This URL appears safe. Opening would redirect to your browser.');
-                }}
-              >
-                <Text style={styles.primaryButtonText}>🔗 OPEN LINK</Text>
-              </TouchableOpacity>
-            ) : (
-              <ThemedView style={styles.warningBox}>
-                <ThemedText style={styles.warningTitle}>⚠️ SECURITY WARNING</ThemedText>
-                <ThemedText style={styles.warningSubtext}>
-                  This QR code may be unsafe. Proceed with extreme caution.
-                </ThemedText>
-              </ThemedView>
-            )}
-            
-            <TouchableOpacity 
-              style={[styles.secondaryButton, { borderColor: colors.tint }]}
-              onPress={resetScanner}
-            >
-              <Text style={[styles.secondaryButtonText, { color: colors.tint }]}>SCAN ANOTHER</Text>
-            </TouchableOpacity>
-          </ThemedView>
-
-          {/* Scan Counter */}
-          <ThemedView style={styles.statsContainer}>
-            <ThemedText style={styles.statsText}>
-              Scan #{scanCount + 1} • {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-            </ThemedText>
-          </ThemedView>
-
-          {/* URL Preview */}
-          <ThemedView style={styles.urlPreview}>
-            <ThemedText style={styles.urlLabel}>SCANNED:</ThemedText>
-            <ThemedText style={styles.urlValue} selectable numberOfLines={2}>
-              {validationResult.url}
-            </ThemedText>
-          </ThemedView>
-
-          {/* Detailed Results (Collapsible) */}
-          <ThemedView style={styles.detailsSection}>
-            <ThemedText style={styles.detailsHeader}>SCAN DETAILS</ThemedText>
-            
-            {validationResult.virusTotal && (
-              <ThemedView style={styles.quickDetailCard}>
-                <ThemedText style={styles.detailTitle}>🛡️ VirusTotal</ThemedText>
-                <ThemedText style={styles.detailValue}>
-                  {validationResult.virusTotal.positives === 0 ? 'Clean' : `${validationResult.virusTotal.positives} threats detected`}
-                </ThemedText>
-              </ThemedView>
-            )}
-
-            <ThemedView style={styles.quickDetailCard}>
-              <ThemedText style={styles.detailTitle}>👥 Community</ThemedText>
-              <ThemedText style={styles.detailValue}>
-                {validationResult.community?.totalVotes === 0 ? 'No votes yet' : `${validationResult.community?.safeVotes || 0} safe votes`}
+      <GestureHandlerRootView style={styles.container}>
+        <ThemedView style={styles.container}>
+          <ScrollView contentContainerStyle={styles.resultContainer}>
+            {/* Quick Result Header */}
+            <ThemedView style={[
+              styles.quickResultCard,
+              { backgroundColor: validationResult.isSecure ? '#2E7D32' : '#D32F2F' }
+            ]}>
+              <ThemedText type="title" style={styles.quickResultTitle}>
+                {validationResult.isSecure ? 'SAFE TO PROCEED' : 'BLOCKED - UNSAFE'}
+              </ThemedText>
+              <ThemedText style={styles.quickConfidence}>
+                {Math.round(validationResult.confidence * 100)}% confidence
               </ThemedText>
             </ThemedView>
-          </ThemedView>
-        </ScrollView>
-      </ThemedView>
+
+            {/* Swipe Gesture Area */}
+            <PanGestureHandler onGestureEvent={handleSwipeGesture}>
+              <Animated.View style={[styles.swipeContainer, animatedStyle]}>
+                <ThemedView style={styles.swipeCard}>
+                  <ThemedView style={styles.swipeInstructions}>
+                  </ThemedView>
+
+                  {/* App Rating and Community */}
+                  {isQuickSafe ? (
+                    <>
+                      {validationResult.virusTotal && (
+                        <ThemedView style={styles.quickDetailCard}>
+                          <ThemedText style={styles.detailTitle}>App Rating</ThemedText>
+                          <ThemedText style={styles.detailValue}>
+                            {validationResult.virusTotal.positives === 0 ? 'Clean' : `${validationResult.virusTotal.positives} threats detected`}
+                          </ThemedText>
+                        </ThemedView>
+                      )}
+
+                      <ThemedView style={styles.quickDetailCard}>
+                        <ThemedText style={styles.detailTitle}>Community Rating</ThemedText>
+                        <ThemedText style={styles.detailValue}>
+                          {validationResult.community?.totalVotes === 0 ? 'No votes yet' : `${validationResult.community?.safeVotes || 0} safe votes`}
+                        </ThemedText>
+                      </ThemedView>
+                    </>
+                  ) : (
+                    <ThemedView style={styles.warningBox}>
+                      <ThemedText style={styles.warningTitle}>⚠️ SECURITY WARNING</ThemedText>
+                      <ThemedText style={styles.warningSubtext}>
+                        This QR code may be unsafe. Swipe left to acknowledge risk and continue scanning.
+                      </ThemedText>
+                    </ThemedView>
+                  )}
+
+                  {/* Visual swipe indicators */}
+                  <ThemedView style={styles.swipeIndicators}>
+                    <View style={[styles.swipeIndicator, styles.leftIndicator]}>
+                      <Text style={styles.indicatorText}>← SCAN</Text>
+                    </View>
+                    <View style={[styles.swipeIndicator, styles.rightIndicator]}>
+                      <Text style={styles.indicatorText}>OPEN →</Text>
+                    </View>
+                  </ThemedView>
+                </ThemedView>
+              </Animated.View>
+            </PanGestureHandler>
+          </ScrollView>
+        </ThemedView>
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.cameraContainer}>
-        <CameraView
-          style={styles.camera}
-          facing={cameraType}
-          onBarcodeScanned={isScanning ? handleQRCodeScanned : undefined}
-          barcodeScannerSettings={{
-            barcodeTypes: ['qr'],
-          }}
-        >
-          <View style={styles.overlay}>
-            <View style={styles.scanFrame} />
-            <ThemedText style={styles.scanText}>
-              Point camera at QR code
-            </ThemedText>
-            <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
+    <GestureHandlerRootView style={styles.container}>
+      <ThemedView style={styles.container}>
+        <View style={styles.cameraContainer}>
+          <CameraView
+            style={styles.camera}
+            facing={cameraType}
+            onBarcodeScanned={isScanning ? handleQRCodeScanned : undefined}
+            barcodeScannerSettings={{
+              barcodeTypes: ['qr'],
+            }}
+          >
+            <View style={styles.overlay}>
+              <View style={styles.scanFrame} />
+              <ThemedText style={styles.scanText}>
+                Point camera at QR code
+              </ThemedText>
+              <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
+              </ThemedText>
+            </View>
+          </CameraView>
+        </View>
+
+        <ThemedView style={styles.controlsContainer}>
+          <TouchableOpacity 
+            style={[styles.controlButton, { backgroundColor: colors.tint }]}
+            onPress={toggleCamera}
+          >
+            <Text style={styles.buttonText}>Flip Camera</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.controlButton, styles.secondaryButton]}
+            onPress={() => setShowManualInput(true)}
+          >
+            <Text style={[styles.buttonText, { color: colors.tint }]}>Manual Input</Text>
+          </TouchableOpacity>
+        </ThemedView>
+
+        {isValidating && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#00E676" />
+            <ThemedText style={styles.loadingText}>⚡ Analyzing QR code...</ThemedText>
+            <ThemedText style={[styles.loadingText, { fontSize: 14, marginTop: 4, opacity: 0.8 }]}>
+              Checking with security databases
             </ThemedText>
           </View>
-        </CameraView>
-      </View>
+        )}
 
-      <ThemedView style={styles.controlsContainer}>
-        <TouchableOpacity 
-          style={[styles.controlButton, { backgroundColor: colors.tint }]}
-          onPress={toggleCamera}
+        <Modal
+          visible={showManualInput}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowManualInput(false)}
         >
-          <Text style={styles.buttonText}>Flip Camera</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.controlButton, styles.secondaryButton]}
-          onPress={() => setShowManualInput(true)}
-        >
-          <Text style={[styles.buttonText, { color: colors.tint }]}>Manual Input</Text>
-        </TouchableOpacity>
+          <View style={styles.modalOverlay}>
+            <ThemedView style={styles.modalContent}>
+              <ThemedText type="subtitle" style={styles.modalTitle}>
+                Enter URL Manually
+              </ThemedText>
+              <TextInput
+                style={[styles.textInput, { borderColor: colors.tabIconDefault, color: colors.text }]}
+                placeholder="Enter URL to validate..."
+                placeholderTextColor={colors.tabIconDefault}
+                value={manualUrl}
+                onChangeText={setManualUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.button, styles.secondaryButton]}
+                  onPress={() => setShowManualInput(false)}
+                >
+                  <Text style={[styles.buttonText, { color: colors.tint }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.button, { backgroundColor: colors.tint }]}
+                  onPress={handleManualInput}
+                >
+                  <Text style={styles.buttonText}>Validate</Text>
+                </TouchableOpacity>
+              </View>
+            </ThemedView>
+          </View>
+        </Modal>
       </ThemedView>
-
-      {isValidating && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#00E676" />
-          <ThemedText style={styles.loadingText}>⚡ Analyzing QR code...</ThemedText>
-          <ThemedText style={[styles.loadingText, { fontSize: 14, marginTop: 4, opacity: 0.8 }]}>
-            Checking with security databases
-          </ThemedText>
-        </View>
-      )}
-
-      <Modal
-        visible={showManualInput}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowManualInput(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <ThemedView style={styles.modalContent}>
-            <ThemedText type="subtitle" style={styles.modalTitle}>
-              Enter URL Manually
-            </ThemedText>
-            <TextInput
-              style={[styles.textInput, { borderColor: colors.tabIconDefault, color: colors.text }]}
-              placeholder="Enter URL to validate..."
-              placeholderTextColor={colors.tabIconDefault}
-              value={manualUrl}
-              onChangeText={setManualUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.button, styles.secondaryButton]}
-                onPress={() => setShowManualInput(false)}
-              >
-                <Text style={[styles.buttonText, { color: colors.tint }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.button, { backgroundColor: colors.tint }]}
-                onPress={handleManualInput}
-              >
-                <Text style={styles.buttonText}>Validate</Text>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-        </View>
-      </Modal>
-    </ThemedView>
+    </GestureHandlerRootView>
   );
 }
 
@@ -529,7 +584,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   resultContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 16,
+    minHeight: height - 100, // Ensure full height minus some padding
   },
   
   // New optimized styles for college students
@@ -752,4 +811,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  swipeContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  swipeCard: {
+    width: '90%',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  swipeInstructions: {
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingVertical: 16,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+  },
+  swipeInstructionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1976D2',
+    textAlign: 'center',
+    marginVertical: 2,
+  },
+  swipeIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  swipeIndicator: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    opacity: 0.6,
+  },
+  leftIndicator: {
+    backgroundColor: '#FF9800',
+  },
+  rightIndicator: {
+    backgroundColor: '#4CAF50',
+  },
+  indicatorText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
 });
+
