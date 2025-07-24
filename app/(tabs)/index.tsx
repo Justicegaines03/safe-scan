@@ -348,68 +348,143 @@ export default function CameraScannerScreen() {
     return (
       <GestureHandlerRootView style={styles.container}>
         <ThemedView style={styles.container}>
-          <ScrollView contentContainerStyle={styles.resultContainer}>
-            {/* Quick Result Header */}
-            <ThemedView style={[
-              styles.quickResultCard,
-              { backgroundColor: validationResult.isSecure ? '#2E7D32' : '#D32F2F' }
-            ]}>
-              <ThemedText type="title" style={styles.quickResultTitle}>
-                {validationResult.isSecure ? 'SAFE TO PROCEED' : 'BLOCKED - UNSAFE'}
-              </ThemedText>
-              <ThemedText style={styles.quickConfidence}>
-                {Math.round(validationResult.confidence * 100)}% confidence
-              </ThemedText>
-            </ThemedView>
-
-            {/* Swipe Gesture Area */}
-            <PanGestureHandler onGestureEvent={handleSwipeGesture}>
-              <Animated.View style={[styles.swipeContainer, animatedStyle]}>
-                <ThemedView style={styles.swipeCard}>
-                  <ThemedView style={styles.swipeInstructions}>
+          {/* Camera background */}
+          <View style={styles.cameraContainer}>
+            <CameraView
+              style={styles.camera}
+              facing={cameraType}
+              onBarcodeScanned={undefined} // Disable scanning while showing results
+              barcodeScannerSettings={{
+                barcodeTypes: ['qr'],
+              }}
+            >
+              {/* Results overlay */}
+              <View style={styles.resultsOverlay}>
+                <ScrollView 
+                  contentContainerStyle={styles.overlayContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* Quick Result Header */}
+                  <ThemedView style={[
+                    styles.quickResultCard,
+                    { backgroundColor: validationResult.isSecure ? '#2E7D32' : '#D32F2F' }
+                  ]}>
+                    <ThemedText type="title" style={styles.quickResultTitle}>
+                      {validationResult.isSecure ? 'SAFE TO PROCEED' : 'BLOCKED - UNSAFE'}
+                    </ThemedText>
+                    <ThemedText style={styles.quickConfidence}>
+                      {Math.round(validationResult.confidence * 100)}% confidence
+                    </ThemedText>
                   </ThemedView>
 
-                  {/* App Rating and Community */}
-                  {isQuickSafe ? (
-                    <>
-                      {validationResult.virusTotal && (
-                        <ThemedView style={styles.quickDetailCard}>
-                          <ThemedText style={styles.detailTitle}>App Rating</ThemedText>
-                          <ThemedText style={styles.detailValue}>
-                            {validationResult.virusTotal.positives === 0 ? 'Clean' : `${validationResult.virusTotal.positives} threats detected`}
-                          </ThemedText>
+                  {/* Swipe Gesture Area */}
+                  <PanGestureHandler onGestureEvent={handleSwipeGesture}>
+                    <Animated.View style={[styles.swipeContainer, animatedStyle]}>
+                      <ThemedView style={styles.swipeCard}>
+                        <ThemedView style={styles.swipeInstructions}>
                         </ThemedView>
-                      )}
 
-                      <ThemedView style={styles.quickDetailCard}>
-                        <ThemedText style={styles.detailTitle}>Community Rating</ThemedText>
-                        <ThemedText style={styles.detailValue}>
-                          {validationResult.community?.totalVotes === 0 ? 'No votes yet' : `${validationResult.community?.safeVotes || 0} safe votes`}
-                        </ThemedText>
+                        {/* App Rating and Community */}
+                        {isQuickSafe ? (
+                          <>
+                            {validationResult.virusTotal && (
+                              <ThemedView style={styles.quickDetailCard}>
+                                <ThemedText style={styles.detailTitle}>App Rating</ThemedText>
+                                <ThemedText style={styles.detailValue}>
+                                  {validationResult.virusTotal.positives === 0 ? 'Clean' : `${validationResult.virusTotal.positives} threats detected`}
+                                </ThemedText>
+                              </ThemedView>
+                            )}
+
+                            <ThemedView style={styles.quickDetailCard}>
+                              <ThemedText style={styles.detailTitle}>Community Rating</ThemedText>
+                              <ThemedText style={styles.detailValue}>
+                                {validationResult.community?.totalVotes === 0 ? 'No votes yet' : `${validationResult.community?.safeVotes || 0} safe votes`}
+                              </ThemedText>
+                            </ThemedView>
+                          </>
+                        ) : (
+                          <ThemedView style={styles.warningBox}>
+                            <ThemedText style={styles.warningTitle}>⚠️ SECURITY WARNING</ThemedText>
+                            <ThemedText style={styles.warningSubtext}>
+                              This QR code may be unsafe. Swipe left to acknowledge risk and continue scanning.
+                            </ThemedText>
+                          </ThemedView>
+                        )}
+
+                        {/* Visual swipe indicators */}
+                        <ThemedView style={styles.swipeIndicators}>
+                          <View style={[styles.swipeIndicator, styles.leftIndicator]}>
+                            <Text style={styles.indicatorText}>← SCAN</Text>
+                          </View>
+                          <View style={[styles.swipeIndicator, styles.rightIndicator]}>
+                            <Text style={styles.indicatorText}>OPEN →</Text>
+                          </View>
+                        </ThemedView>
                       </ThemedView>
-                    </>
-                  ) : (
-                    <ThemedView style={styles.warningBox}>
-                      <ThemedText style={styles.warningTitle}>⚠️ SECURITY WARNING</ThemedText>
-                      <ThemedText style={styles.warningSubtext}>
-                        This QR code may be unsafe. Swipe left to acknowledge risk and continue scanning.
-                      </ThemedText>
-                    </ThemedView>
-                  )}
+                    </Animated.View>
+                  </PanGestureHandler>
+                </ScrollView>
+              </View>
+            </CameraView>
+          </View>
 
-                  {/* Visual swipe indicators */}
-                  <ThemedView style={styles.swipeIndicators}>
-                    <View style={[styles.swipeIndicator, styles.leftIndicator]}>
-                      <Text style={styles.indicatorText}>← SCAN</Text>
-                    </View>
-                    <View style={[styles.swipeIndicator, styles.rightIndicator]}>
-                      <Text style={styles.indicatorText}>OPEN →</Text>
-                    </View>
-                  </ThemedView>
-                </ThemedView>
-              </Animated.View>
-            </PanGestureHandler>
-          </ScrollView>
+          {/* Keep controls visible */}
+          <ThemedView style={styles.controlsContainer}>
+            <TouchableOpacity 
+              style={[styles.controlButton, { backgroundColor: colors.tint }]}
+              onPress={toggleCamera}
+            >
+              <Text style={styles.buttonText}>Flip Camera</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.controlButton, styles.secondaryButton]}
+              onPress={() => setShowManualInput(true)}
+            >
+              <Text style={[styles.buttonText, { color: colors.tint }]}>Manual Input</Text>
+            </TouchableOpacity>
+          </ThemedView>
+
+          {/* Manual input modal */}
+          <Modal
+            visible={showManualInput}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setShowManualInput(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <ThemedView style={styles.modalContent}>
+                <ThemedText type="subtitle" style={styles.modalTitle}>
+                  Enter URL Manually
+                </ThemedText>
+                <TextInput
+                  style={[styles.textInput, { borderColor: colors.tabIconDefault, color: colors.text }]}
+                  placeholder="Enter URL to validate..."
+                  placeholderTextColor={colors.tabIconDefault}
+                  value={manualUrl}
+                  onChangeText={setManualUrl}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.button, styles.secondaryButton]}
+                    onPress={() => setShowManualInput(false)}
+                  >
+                    <Text style={[styles.buttonText, { color: colors.tint }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.button, { backgroundColor: colors.tint }]}
+                    onPress={handleManualInput}
+                  >
+                    <Text style={styles.buttonText}>Validate</Text>
+                  </TouchableOpacity>
+                </View>
+              </ThemedView>
+            </View>
+          </Modal>
         </ThemedView>
       </GestureHandlerRootView>
     );
@@ -541,8 +616,10 @@ const styles = StyleSheet.create({
   controlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    padding: 0, // Remove all padding
+    paddingVertical: 12, // Add minimal vertical padding only
+    paddingHorizontal: 16, // Keep horizontal padding for button spacing
+    paddingBottom: Platform.OS === 'ios' ? 20 : 12, // Minimal bottom padding for safe area
   },
   controlButton: {
     paddingVertical: 10,
@@ -598,10 +675,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 12, // Increased elevation for better visibility
   },
   quickResultTitle: {
     color: '#fff',
@@ -641,7 +718,7 @@ const styles = StyleSheet.create({
   },
   warningBox: {
     padding: 16,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: 'rgba(255, 243, 224, 0.95)', // Semi-transparent warning background
     borderRadius: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#FF9800',
@@ -702,7 +779,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'rgba(248, 249, 250, 0.9)', // Semi-transparent background
     borderRadius: 8,
     marginBottom: 8,
   },
@@ -817,14 +894,15 @@ const styles = StyleSheet.create({
   },
   swipeCard: {
     width: '90%',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'rgba(248, 249, 250, 0.95)', // Semi-transparent background
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    backdropFilter: 'blur(10px)', // For iOS blur effect
   },
   swipeInstructions: {
     alignItems: 'center',
@@ -861,6 +939,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  resultsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Semi-transparent dark overlay
+    justifyContent: 'center',
+  },
+  overlayContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    paddingTop: 60, // Account for status bar
+    paddingBottom: 20,
   },
 });
 
