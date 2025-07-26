@@ -58,6 +58,15 @@ interface ValidationResult {
   warning?: string;
 }
 
+/**
+ * QR Code Scanner with Security Validation
+ * 
+ * Icon Size Configuration:
+ * - To change icon sizes, modify the 'iconSize' and 'largeIconSize' values in the styles
+ * - iconSize.fontSize controls small icons (shield, person)
+ * - largeIconSize.fontSize controls action button icons
+ */
+
 const { width, height } = Dimensions.get('window');
 
 export default function CameraScannerScreen() {
@@ -244,21 +253,50 @@ export default function CameraScannerScreen() {
     setIsScanning(true);
   };
 
+  const testOpenLink = () => {
+    const testUrl = 'https://www.google.com';
+    console.log('Testing with known good URL:', testUrl);
+    openLink(testUrl);
+  };
+
   const toggleCamera = () => {
     setCameraType(current => current === 'back' ? 'front' : 'back');
   };
 
   const openLink = async (url: string) => {
     try {
-      const supported = await Linking.canOpenURL(url);
+      console.log('Attempting to open URL:', url);
+      
+      // Validate URL format first
+      if (!url || typeof url !== 'string') {
+        console.error('Invalid URL provided:', url);
+        Alert.alert('Error', 'Invalid URL provided');
+        return;
+      }
+
+      // Ensure URL has a proper protocol
+      let formattedUrl = url.trim();
+      if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+        formattedUrl = `https://${formattedUrl}`;
+        console.log('Added https protocol, new URL:', formattedUrl);
+      }
+
+      console.log('Checking if URL can be opened:', formattedUrl);
+      const supported = await Linking.canOpenURL(formattedUrl);
+      console.log('URL supported:', supported);
+      
       if (supported) {
-        await Linking.openURL(url);
+        console.log('Opening URL...');
+        await Linking.openURL(formattedUrl);
+        console.log('URL opened successfully');
       } else {
-        Alert.alert('Error', 'Cannot open this URL');
+        console.error('URL not supported by device:', formattedUrl);
+        Alert.alert('Error', `Cannot open this URL: ${formattedUrl}\n\nThis URL format may not be supported on your device.`);
       }
     } catch (error) {
       console.error('Error opening URL:', error);
-      Alert.alert('Error', 'Failed to open URL');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Failed to open URL: ${errorMessage}`);
     }
   };
 
@@ -372,7 +410,7 @@ export default function CameraScannerScreen() {
                     ]}>
                     <SymbolView  
                     name="shield.checkered" 
-                    size={18} 
+                    size={styles.iconSize.fontSize} 
                     tintColor="#FFFFFF" 
                     />
                     <ThemedText style={[
@@ -393,7 +431,7 @@ export default function CameraScannerScreen() {
                   <ThemedView style={[styles.quickDetailCard, { backgroundColor: 'transparent', padding: 0 }]}>
                   <SymbolView 
                   name="person.3" 
-                  size={25} 
+                  size={styles.iconSize.fontSize + 7} 
                   tintColor="#FFFFFF" 
                   />
                   <ThemedText style={[
@@ -408,11 +446,45 @@ export default function CameraScannerScreen() {
                   <ThemedView style={styles.warningBox}>
                   <ThemedText style={styles.warningTitle}>⚠️ SECURITY WARNING</ThemedText>
                   <ThemedText style={styles.warningSubtext}>
-                    This QR code may be unsafe. Swipe left to acknowledge risk and continue scanning.
+                    This QR code may be unsafe. Tap to continue scanning.
                   </ThemedText>
                   </ThemedView>
                   )}
                 </ThemedView>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.actionButtonsContainer}>
+                <TouchableOpacity style={styles.actionButton} onPress={resetScanner}>
+                  <SymbolView 
+                  name="xmark" 
+                  size={styles.iconSize.fontSize}
+                  tintColor="#FF0000" 
+                  />
+                  <Text style={styles.actionButtonText}>Scan New</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.actionButton} 
+                  onPress={() => {
+                    console.log('Open button pressed');
+                    console.log('validationResult:', validationResult);
+                    console.log('URL to open:', validationResult?.url);
+                    if (validationResult?.url) {
+                      openLink(validationResult.url);
+                    } else {
+                      console.error('No URL available in validationResult');
+                      Alert.alert('Error', 'No URL available to open');
+                    }
+                  }}
+                >
+                  <SymbolView 
+                  name="arrow.up.forward" 
+                  size={styles.largeIconSize.fontSize}
+                  tintColor="#00AA00" 
+                  />
+                  <Text style={styles.actionButtonText}>Open</Text>
+                </TouchableOpacity>
               </View>
             </CameraView>
           </View>
@@ -458,6 +530,13 @@ export default function CameraScannerScreen() {
           >
             <Text style={[styles.buttonText, { color: colors.tint }]}>Manual Input</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.controlButton, { backgroundColor: '#4CAF50' }]}
+            onPress={testOpenLink}
+          >
+            <Text style={styles.buttonText}>Test Link</Text>
+          </TouchableOpacity>
         </ThemedView>
 
         {isValidating && (
@@ -469,45 +548,6 @@ export default function CameraScannerScreen() {
             </ThemedText>
           </View>
         )}
-
-        <Modal
-          visible={showManualInput}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowManualInput(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <ThemedView style={styles.modalContent}>
-              <ThemedText type="subtitle" style={styles.modalTitle}>
-                Enter URL Manually
-              </ThemedText>
-              <TextInput
-                style={[styles.textInput, { borderColor: colors.tabIconDefault, color: colors.text }]}
-                placeholder="Enter URL to validate..."
-                placeholderTextColor={colors.tabIconDefault}
-                value={manualUrl}
-                onChangeText={setManualUrl}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-              <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.button, styles.secondaryButton]}
-                  onPress={() => setShowManualInput(false)}
-                >
-                  <Text style={[styles.buttonText, { color: colors.tint }]}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.button, { backgroundColor: colors.tint }]}
-                  onPress={handleManualInput}
-                >
-                  <Text style={styles.buttonText}>Validate</Text>
-                </TouchableOpacity>
-              </View>
-            </ThemedView>
-          </View>
-        </Modal>
       </ThemedView>
     </GestureHandlerRootView>
   );
@@ -516,6 +556,12 @@ export default function CameraScannerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  iconSize: {
+    fontSize: 20, // Changed from 18 to 20 - you can adjust this value
+  },
+  largeIconSize: {
+    fontSize: 28, // Changed from 24 to 28 - you can adjust this value
   },
   cameraContainer: {
     flex: 1,
@@ -883,5 +929,39 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingLeft: 20,
     backgroundColor: 'transparent', // Remove background color
+  },
+  actionButtonsContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 40,
+  },
+  actionButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 40,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  actionButtonText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#333333',
+    marginTop: 2, // Add small margin between icon and text
+  },
+  actionButtonIconGreen: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#00AA00',
+    marginBottom: 2,
   },
 });
