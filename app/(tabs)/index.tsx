@@ -25,6 +25,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { SymbolView } from 'expo-symbols';
 
 // Types
 interface QRScanResult {
@@ -358,50 +359,60 @@ export default function CameraScannerScreen() {
                 barcodeTypes: ['qr'],
               }}
             >
-              {/* Results overlay */}
+                {/* Results overlay */}
               <View style={styles.resultsOverlay}>
-                <ScrollView 
-                  contentContainerStyle={styles.overlayContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {/* Quick Result Header */}
-                  <ThemedView style={[
-                    styles.quickResultCard,
-                    { backgroundColor: validationResult.isSecure ? '#2E7D32' : '#D32F2F' }
-                  ]}>
-                    <ThemedText type="title" style={styles.quickResultTitle}>
-                      {validationResult.isSecure ? 'SAFE' : 'UNSAFE'}
+                <ThemedView style={styles.overlayContent}>
+                  {/* App Rating */}
+                  {isQuickSafe ? (
+                  <>
+                  {validationResult.virusTotal && (
+                    <ThemedView style={[
+                    styles.quickDetailCard,
+                    { backgroundColor: validationResult.virusTotal.positives === 0 ? '#2E7D32' : '#C62828', padding: 6, borderRadius: 20, marginBottom: 8}
+                    ]}>
+                    <SymbolView  
+                    name="shield.checkered" 
+                    size={18} 
+                    tintColor="#FFFFFF" 
+                    />
+                    <ThemedText style={[
+                    styles.detailTitle,
+                    { color: '#FFFFFF' }
+                    ]}>
+                    {validationResult.virusTotal.positives === 0 ? ' Clean' : ` Threat`}
                     </ThemedText>
+                    </ThemedView>
+                    )}
 
+                  {/* Safe or Unsafe */}
+                  <ThemedText type="title" style={[styles.quickResultTitle, { backgroundColor: 'transparent', fontSize: 28 },]}>
+                  {validationResult.isSecure ? 'Safe' : 'Unsafe'}
+                  </ThemedText>
+
+                  {/* Community Rating */}
+                  <ThemedView style={[styles.quickDetailCard, { backgroundColor: 'transparent', padding: 0 }]}>
+                  <SymbolView 
+                  name="person.3" 
+                  size={25} 
+                  tintColor="#FFFFFF" 
+                  />
+                  <ThemedText style={[
+                  styles.detailTitle,
+                  { color: '#FFFFFF' }
+                  ]}>
+                  {validationResult.community?.totalVotes === 0 ? '  No votes yet' : `  ${validationResult.community?.safeVotes || 0} safe votes`}
+                  </ThemedText>
                   </ThemedView>
-                        {/* App Rating and Community */}
-                        {isQuickSafe ? (
-                          <>
-                            {validationResult.virusTotal && (
-                              <ThemedView style={styles.quickDetailCard}>
-                                <ThemedText style={styles.detailTitle}>App Rating: </ThemedText>
-                                <ThemedText style={styles.detailValue}>
-                                  {validationResult.virusTotal.positives === 0 ? 'Clean' : `${validationResult.virusTotal.positives} threats detected`}
-                                </ThemedText>
-                              </ThemedView>
-                            )}
-
-                            <ThemedView style={styles.quickDetailCard}>
-                              <ThemedText style={styles.detailTitle}>Community Rating: </ThemedText>
-                              <ThemedText style={styles.detailValue}>
-                                {validationResult.community?.totalVotes === 0 ? 'No votes yet' : `${validationResult.community?.safeVotes || 0} safe votes`}
-                              </ThemedText>
-                            </ThemedView>
-                          </>
-                        ) : (
-                          <ThemedView style={styles.warningBox}>
-                            <ThemedText style={styles.warningTitle}>⚠️ SECURITY WARNING</ThemedText>
-                            <ThemedText style={styles.warningSubtext}>
-                              This QR code may be unsafe. Swipe left to acknowledge risk and continue scanning.
-                            </ThemedText>
-                          </ThemedView>
-                        )}
-                </ScrollView>
+                  </>
+                  ) : (
+                  <ThemedView style={styles.warningBox}>
+                  <ThemedText style={styles.warningTitle}>⚠️ SECURITY WARNING</ThemedText>
+                  <ThemedText style={styles.warningSubtext}>
+                    This QR code may be unsafe. Swipe left to acknowledge risk and continue scanning.
+                  </ThemedText>
+                  </ThemedView>
+                  )}
+                </ThemedView>
               </View>
             </CameraView>
           </View>
@@ -862,15 +873,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   resultsOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Semi-transparent dark overlay
-    alignItems: 'flex-start', // Move to left
+    position: 'absolute',
+    bottom: 160,
+    left: 0,
+    backgroundColor: 'transparent', // Remove dark background
   },
   overlayContent: { 
     alignItems: 'flex-start',
     padding: 16,
-    paddingBottom: 100, // Account for navigation bar
-    paddingLeft: 20, // Add left padding
+    paddingLeft: 20,
+    backgroundColor: 'transparent', // Remove background color
   },
 });
-
