@@ -519,10 +519,6 @@ export default function CameraScannerScreen() {
               {isValidating && (
                 <View style={styles.cameraLoadingOverlay}>
                   <ActivityIndicator size="large" color="#00E676" />
-                  <ThemedText style={styles.loadingText}>⚡ Analyzing QR code...</ThemedText>
-                  <ThemedText style={[styles.loadingText, { fontSize: 14, marginTop: 4, opacity: 0.8 }]}>
-                    Checking with security databases
-                  </ThemedText>
                 </View>
               )}
             </CameraView>
@@ -543,7 +539,7 @@ export default function CameraScannerScreen() {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={styles.logoText}>SafeScan</Text>
+            <Text style={[styles.logoText, { marginLeft: 2 }]}>SafeScan</Text>
           </View>
           <TouchableOpacity 
             style={styles.settingsButton}
@@ -554,7 +550,7 @@ export default function CameraScannerScreen() {
           >
             <SymbolView 
               name="gear" 
-              size={24}
+              size={35}
               tintColor="#FFFFFF" 
             />
           </TouchableOpacity>
@@ -570,22 +566,22 @@ export default function CameraScannerScreen() {
             }}
           >
             <View style={styles.overlay}>
-              <View style={styles.scanFrame} />
-              <ThemedText style={styles.scanText}>
-                Point camera at QR code
-              </ThemedText>
-              <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
-              </ThemedText>
+              {!isValidating && (
+                <>
+                  <View style={styles.scanFrame} />
+                  <ThemedText style={styles.scanText}>
+                    Point camera at QR code
+                  </ThemedText>
+                  <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
+                  </ThemedText>
+                </>
+              )}
             </View>
 
             {isValidating && (
-              <View style={styles.cameraLoadingOverlay}>
+                <View style={styles.cameraLoadingOverlay}>
                 <ActivityIndicator size="large" color="#00E676" />
-                <ThemedText style={styles.loadingText}>⚡ Analyzing QR code...</ThemedText>
-                <ThemedText style={[styles.loadingText, { fontSize: 14, marginTop: 4, opacity: 0.8 }]}>
-                  Checking with security databases
-                </ThemedText>
-              </View>
+                </View>
             )}
           </CameraView>
         </View>
