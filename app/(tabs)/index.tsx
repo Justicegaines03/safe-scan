@@ -98,16 +98,73 @@ export default function CameraScannerScreen() {
   const validateWithVirusTotal = async (url: string): Promise<VirusTotalResult> => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        // Mock response - in real implementation, use actual VirusTotal API
+        // More realistic mock response that demonstrates various security scenarios
+        let isSecure = true;
+        let positives = 0;
+        const total = Math.floor(Math.random() * 10) + 65; // Random between 65-75 engines
+        
+        // Check for obviously malicious patterns
+        const maliciousPatterns = [
+          'malicious', 'suspicious', 'phishing', 'scam', 'hack', 'steal', 'virus',
+          'malware', 'trojan', 'ransomware', 'fraud', 'fake', 'counterfeit'
+        ];
+        
+        // Check for suspicious URL characteristics
+        const suspiciousPatterns = [
+          /bit\.ly\/[a-zA-Z0-9]{6,}/, // Shortened URLs with random chars
+          /tinyurl\.com/, // URL shorteners
+          /[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/, // IP addresses
+          /[a-z0-9]{20,}\.com/, // Random domain names
+          /secure.*login.*[a-z]{2,4}\.ru$/, // Suspicious Russian domains
+          /update.*security.*\.tk$/, // Suspicious free domains
+          /verify.*account.*\.ml$/, // Suspicious free domains
+        ];
+        
+        // Check for known safe domains
+        const safeDomains = [
+          'google.com', 'youtube.com', 'facebook.com', 'instagram.com', 'twitter.com',
+          'linkedin.com', 'microsoft.com', 'apple.com', 'amazon.com', 'netflix.com',
+          'github.com', 'stackoverflow.com', 'wikipedia.org', 'reddit.com'
+        ];
+        
+        const urlLower = url.toLowerCase();
+        
+        // Check for explicitly malicious content
+        if (maliciousPatterns.some(pattern => urlLower.includes(pattern))) {
+          isSecure = false;
+          positives = Math.floor(Math.random() * 20) + 15; // 15-35 detections
+        }
+        // Check for suspicious patterns
+        else if (suspiciousPatterns.some(pattern => pattern.test(urlLower))) {
+          isSecure = false;
+          positives = Math.floor(Math.random() * 15) + 3; // 3-18 detections
+        }
+        // Check for known safe domains
+        else if (safeDomains.some(domain => urlLower.includes(domain))) {
+          isSecure = true;
+          positives = Math.floor(Math.random() * 2); // 0-1 false positives
+        }
+        // For unknown domains, show mixed results to demonstrate uncertainty
+        else {
+          const randomSafety = Math.random();
+          if (randomSafety < 0.7) { // 70% chance of being safe
+            isSecure = true;
+            positives = Math.floor(Math.random() * 3); // 0-2 detections
+          } else { // 30% chance of being flagged
+            isSecure = false;
+            positives = Math.floor(Math.random() * 8) + 2; // 2-10 detections
+          }
+        }
+        
         const mockResult: VirusTotalResult = {
-          isSecure: !url.includes('malicious') && !url.includes('suspicious'),
-          positives: url.includes('malicious') ? 15 : 0,
-          total: 70,
+          isSecure,
+          positives,
+          total,
           scanId: `scan-${Date.now()}`,
           permalink: `https://virustotal.com/gui/url/${btoa(url)}`
         };
         resolve(mockResult);
-      }, 300); // Reduced from 1500ms to 300ms
+      }, 300);
     });
   };
 
@@ -115,14 +172,56 @@ export default function CameraScannerScreen() {
   const getCommunityRating = async (url: string): Promise<CommunityRating> => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        // Show "No votes yet" for new URLs
+        // More realistic community ratings based on URL characteristics
+        let safeVotes = 0;
+        let unsafeVotes = 0;
+        let totalVotes = 0;
+        
+        const urlLower = url.toLowerCase();
+        
+        // Known safe domains get positive community ratings
+        const safeDomains = [
+          'google.com', 'youtube.com', 'facebook.com', 'instagram.com', 'twitter.com',
+          'linkedin.com', 'microsoft.com', 'apple.com', 'amazon.com', 'netflix.com',
+          'github.com', 'stackoverflow.com', 'wikipedia.org', 'reddit.com'
+        ];
+        
+        // Suspicious patterns get negative ratings
+        const suspiciousPatterns = [
+          'malicious', 'suspicious', 'phishing', 'scam', 'hack', 'steal',
+          'bit.ly', 'tinyurl', 'secure-login', 'verify-account'
+        ];
+        
+        if (safeDomains.some(domain => urlLower.includes(domain))) {
+          // Popular safe sites have many positive votes
+          totalVotes = Math.floor(Math.random() * 50) + 20; // 20-70 votes
+          safeVotes = Math.floor(totalVotes * (0.85 + Math.random() * 0.13)); // 85-98% safe
+          unsafeVotes = totalVotes - safeVotes;
+        } else if (suspiciousPatterns.some(pattern => urlLower.includes(pattern))) {
+          // Suspicious sites have negative ratings
+          totalVotes = Math.floor(Math.random() * 30) + 5; // 5-35 votes
+          unsafeVotes = Math.floor(totalVotes * (0.7 + Math.random() * 0.25)); // 70-95% unsafe
+          safeVotes = totalVotes - unsafeVotes;
+        } else {
+          // Unknown sites have fewer votes or no votes
+          const hasVotes = Math.random() > 0.4; // 60% chance of having some votes
+          if (hasVotes) {
+            totalVotes = Math.floor(Math.random() * 15) + 1; // 1-15 votes
+            const safeRatio = Math.random(); // Random safe/unsafe ratio
+            safeVotes = Math.floor(totalVotes * safeRatio);
+            unsafeVotes = totalVotes - safeVotes;
+          }
+        }
+        
+        const confidence = totalVotes > 0 ? safeVotes / totalVotes : 0.5;
+        
         resolve({
-          safeVotes: 0,
-          unsafeVotes: 0,
-          totalVotes: 0,
-          confidence: 0.5
+          safeVotes,
+          unsafeVotes,
+          totalVotes,
+          confidence
         });
-      }, 150); // Reduced from 800ms to 150ms
+      }, 150);
     });
   };
 
@@ -160,14 +259,20 @@ export default function CameraScannerScreen() {
         getCommunityRating(processedUrl).catch(() => null)
       ]);
 
-      // Calculate final security assessment
+      // Calculate final security assessment with more nuanced logic
       let isSecure = true;
       let confidence = 0.5;
       let warning: string | undefined;
 
       if (virusTotalResult) {
         isSecure = virusTotalResult.isSecure;
-        confidence = virusTotalResult.isSecure ? 0.9 : 0.1;
+        // Calculate confidence based on detection ratio
+        const detectionRatio = virusTotalResult.positives / virusTotalResult.total;
+        if (virusTotalResult.isSecure) {
+          confidence = Math.max(0.7, 0.95 - (detectionRatio * 2)); // High confidence for clean scans
+        } else {
+          confidence = Math.min(0.3, detectionRatio); // Low confidence for detected threats
+        }
       }
 
       if (communityResult && communityResult.totalVotes >= 3) {
@@ -177,13 +282,25 @@ export default function CameraScannerScreen() {
           isSecure = communityConfidence > 0.6;
           confidence = communityConfidence;
         } else {
-          // Combine both scores, giving VirusTotal priority
-          confidence = (confidence * 0.7) + (communityConfidence * 0.3);
+          // Combine both scores, giving VirusTotal higher weight but considering community input
+          const vtWeight = 0.75;
+          const communityWeight = 0.25;
+          confidence = (confidence * vtWeight) + (communityConfidence * communityWeight);
+          
+          // If community strongly disagrees with VirusTotal, add warning
+          if (Math.abs(confidence - communityConfidence) > 0.4) {
+            warning = 'Community opinion differs from security scan - use caution';
+          }
         }
       }
 
-      if (confidence < 0.6) {
-        warning = 'Low confidence rating - proceed with caution';
+      // Add warnings based on confidence levels
+      if (confidence < 0.3) {
+        warning = 'High risk detected - strongly recommend avoiding this link';
+      } else if (confidence < 0.6) {
+        warning = 'Moderate risk detected - proceed with caution';
+      } else if (confidence < 0.8 && !warning) {
+        warning = 'Some uncertainty in security assessment';
       }
 
       return {
