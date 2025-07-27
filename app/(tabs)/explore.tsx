@@ -42,6 +42,7 @@ interface ScanHistoryEntry {
   };
   userTag?: 'safe' | 'unsafe' | null;
   scanDuration?: number;
+  isMockData?: boolean; // Flag to identify mock training data
 }
 
 interface HistoryFilter {
@@ -82,11 +83,26 @@ export default function ScanHistoryScreen() {
     try {
       setIsLoading(true);
       
-      // Force regenerate mock data to ensure consistency between devices
+      // Load existing history from storage
+      const data = await AsyncStorage.getItem(STORAGE_KEY);
+      let existingHistory: ScanHistoryEntry[] = data ? JSON.parse(data) : [];
+      
+      // Generate mock data
       const mockData = generateMockHistory();
-      setHistory(mockData);
-      // Save the mock data
-      await saveHistory(mockData);
+      
+      // Separate real scans from mock data
+      const realScans = existingHistory.filter(entry => !entry.isMockData);
+      
+      // Combine real scans (newest first) with mock data
+      const combinedHistory = [...realScans, ...mockData];
+      
+      // Sort by timestamp (newest first)
+      combinedHistory.sort((a, b) => b.timestamp - a.timestamp);
+      
+      setHistory(combinedHistory);
+      
+      // Save the combined history
+      await saveHistory(combinedHistory);
       
     } catch (error) {
       console.error('Error loading history:', error);
@@ -128,7 +144,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 1
         },
         userTag: 'safe',
-        scanDuration: 1200
+        scanDuration: 1200,
+        isMockData: true // Add flag to identify mock data
       },
       {
         id: '2',
@@ -149,7 +166,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 12
         },
         userTag: 'unsafe',
-        scanDuration: 2800
+        scanDuration: 2800,
+        isMockData: true
       },
       {
         id: '3',
@@ -162,7 +180,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 0
         },
         userTag: null,
-        scanDuration: 650
+        scanDuration: 650,
+        isMockData: true
       },
       {
         id: '4',
@@ -183,7 +202,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 2
         },
         userTag: 'safe',
-        scanDuration: 980
+        scanDuration: 980,
+        isMockData: true
       },
       {
         id: '5',
@@ -196,7 +216,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 1
         },
         userTag: 'safe',
-        scanDuration: 450
+        scanDuration: 450,
+        isMockData: true
       },
       {
         id: '6',
@@ -217,7 +238,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 7
         },
         userTag: null,
-        scanDuration: 3200
+        scanDuration: 3200,
+        isMockData: true
       },
       {
         id: '7',
@@ -238,7 +260,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 2
         },
         userTag: 'safe',
-        scanDuration: 1100
+        scanDuration: 1100,
+        isMockData: true
       },
       {
         id: '8',
@@ -251,7 +274,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 2
         },
         userTag: null,
-        scanDuration: 320
+        scanDuration: 320,
+        isMockData: true
       },
       {
         id: '9',
@@ -272,7 +296,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 15
         },
         userTag: 'unsafe',
-        scanDuration: 4500
+        scanDuration: 4500,
+        isMockData: true
       },
       {
         id: '10',
@@ -293,7 +318,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 2
         },
         userTag: null,
-        scanDuration: 850
+        scanDuration: 850,
+        isMockData: true
       },
       {
         id: '11',
@@ -306,7 +332,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 1
         },
         userTag: 'safe',
-        scanDuration: 580
+        scanDuration: 580,
+        isMockData: true
       },
       {
         id: '12',
@@ -319,7 +346,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 0
         },
         userTag: null,
-        scanDuration: 410
+        scanDuration: 410,
+        isMockData: true
       },
       {
         id: '13',
@@ -340,7 +368,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 25
         },
         userTag: 'unsafe',
-        scanDuration: 5200
+        scanDuration: 5200,
+        isMockData: true
       },
       {
         id: '14',
@@ -361,7 +390,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 1
         },
         userTag: 'safe',
-        scanDuration: 920
+        scanDuration: 920,
+        isMockData: true
       },
       {
         id: '15',
@@ -374,7 +404,8 @@ export default function ScanHistoryScreen() {
           unsafeVotes: 0
         },
         userTag: null,
-        scanDuration: 380
+        scanDuration: 380,
+        isMockData: true
       }
     ];
     return mockEntries;
@@ -662,12 +693,20 @@ export default function ScanHistoryScreen() {
           <ThemedText type="title" style={[styles.statusText, { fontSize: 20}]}>
             {item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1)}
           </ThemedText>
-          {/* Quick scan time indicator */}
-          {item.scanDuration && (
-            <ThemedText style={styles.scanTime}>
-              ({Math.round(item.scanDuration / 100) / 10}s)
-            </ThemedText>
-          )}
+          {/* Quick scan time indicator and mock tag */}
+          <View style={styles.scanTimeContainer}>
+            {item.scanDuration && (
+              <ThemedText style={styles.scanTime}>
+                ({Math.round(item.scanDuration / 100) / 10}s)
+              </ThemedText>
+            )}
+            {/* Mock tag for training data */}
+            {item.isMockData && (
+              <View style={styles.mockTag}>
+                <ThemedText style={styles.mockTagText}>Mock</ThemedText>
+              </View>
+            )}
+          </View>
         </View>
         <ThemedText style={styles.timestamp}>
           {formatTimestamp(item.timestamp)}
@@ -1670,5 +1709,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'normal',
     color: '#666666',
+  },
+  scanTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  mockTag: {
+    backgroundColor: '#666666',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 18,
+  },
+  mockTagText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });

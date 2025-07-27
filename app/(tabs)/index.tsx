@@ -208,6 +208,49 @@ export default function CameraScannerScreen() {
     }
   };
 
+  const saveToHistory = async (scanData: string, validationResult: ValidationResult, scanStartTime: number) => {
+    try {
+      const STORAGE_KEY = '@safe_scan_history';
+      const existingHistory = await AsyncStorage.getItem(STORAGE_KEY);
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      
+      const scanEndTime = Date.now();
+      const scanDuration = scanEndTime - scanStartTime;
+      
+      const newEntry = {
+        id: `scan_${scanEndTime}`,
+        qrData: scanData,
+        url: validationResult.url,
+        timestamp: scanEndTime,
+        safetyStatus: validationResult.isSecure ? 'safe' : 'unsafe',
+        virusTotalResult: validationResult.virusTotal ? {
+          isSecure: validationResult.virusTotal.isSecure,
+          positives: validationResult.virusTotal.positives,
+          total: validationResult.virusTotal.total,
+          scanId: validationResult.virusTotal.scanId,
+          permalink: validationResult.virusTotal.permalink
+        } : undefined,
+        communityRating: validationResult.community ? {
+          confidence: validationResult.community.confidence,
+          safeVotes: validationResult.community.safeVotes,
+          unsafeVotes: validationResult.community.unsafeVotes
+        } : undefined,
+        userTag: null, // No mock tag for real scans
+        scanDuration: scanDuration
+      };
+      
+      // Add to beginning of history array
+      history.unshift(newEntry);
+      
+      // Keep only last 100 entries to prevent storage overflow
+      const trimmedHistory = history.slice(0, 100);
+      
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+    } catch (error) {
+      console.error('Error saving to history:', error);
+    }
+  };
+
   const handleQRCodeScanned = async ({ data }: { data: string }) => {
     const now = Date.now();
     
@@ -216,6 +259,7 @@ export default function CameraScannerScreen() {
       return;
     }
 
+    const scanStartTime = now;
     setLastScanTime(now);
     setIsScanning(false);
     setScanCount(prev => prev + 1);
@@ -233,6 +277,9 @@ export default function CameraScannerScreen() {
     try {
       const result = await validateUrl(truncatedData);
       setValidationResult(result);
+      
+      // Save to history
+      await saveToHistory(truncatedData, result, scanStartTime);
     } catch (error) {
       console.error('Scan processing error:', error);
       Alert.alert('Error', 'Failed to process QR code');
@@ -246,9 +293,14 @@ export default function CameraScannerScreen() {
       return;
     }
 
+    const scanStartTime = Date.now();
     setShowManualInput(false);
     const result = await validateUrl(manualUrl);
     setValidationResult(result);
+    
+    // Save to history
+    await saveToHistory(manualUrl, result, scanStartTime);
+    
     setManualUrl('');
   };
 
