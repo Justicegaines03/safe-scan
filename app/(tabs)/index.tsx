@@ -397,7 +397,10 @@ export default function CameraScannerScreen() {
                 barcodeTypes: ['qr'],
               }}
             >
-                {/* Results overlay */}
+              {/* Camera darkening overlay */}
+              <View style={styles.cameraDarkenOverlay} />
+              
+              {/* Results overlay */}
               <View style={styles.resultsOverlay}>
                 <ThemedView style={styles.overlayContent}>
                   {/* App Rating */}
@@ -565,9 +568,20 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 110 : 30, // Add top padding for status bar spacing
   },
   camera: {
     flex: 1,
+  },
+  cameraDarkenOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Semi-transparent dark overlay
+    zIndex: 1, // Ensure it's above the camera but below other overlays
+    pointerEvents: 'none', // Allow touch events to pass through
   },
   overlay: {
     flex: 1,
@@ -923,6 +937,7 @@ const styles = StyleSheet.create({
     bottom: 160,
     left: 0,
     backgroundColor: 'transparent', // Remove dark background
+    zIndex: 3, // Ensure it's above the camera darkening overlay
   },
   overlayContent: { 
     alignItems: 'flex-start',
@@ -938,6 +953,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 40,
+    zIndex: 3, // Ensure it's above the camera darkening overlay
   },
   actionButton: {
     width: 70,
