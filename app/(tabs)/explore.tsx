@@ -768,44 +768,18 @@ export default function ScanHistoryScreen() {
       <View style={styles.header}>
         <ThemedText type="title" style={styles.headerTitle}>History</ThemedText>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.quickButton, {}]}
-            onPress={() => setShowFilters(!showFilters)}
-          >
-            <SymbolView
-              name="magnifyingglass"
-              size={24}
-              type="monochrome"
-              tintColor="#007AFF"
-              fallback={<ThemedText style={styles.quickButtonText}>Search</ThemedText>}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.quickButton, {}]}
-            onPress={exportHistory}
-          >
-            <SymbolView
-              name="square.and.arrow.up"
-              size={24}
-              type="monochrome"
-              tintColor="#007AFF"
-              fallback={<ThemedText style={styles.quickButtonText}>Export</ThemedText>}
-            />
-          </TouchableOpacity>
-          {history.length > 0 && (
             <TouchableOpacity
-              style={[styles.quickButton, {}]}
-              onPress={clearHistory}
+              style={[styles.quickButton, { backgroundColor: 'transparent', marginRight: 8 }]}
+              onPress={() => setShowFilters(!showFilters)}
             >
               <SymbolView
-                name="trash.fill"
-                size={24}
-                type="monochrome"
-                tintColor="#007AFF"
-                fallback={<ThemedText style={styles.quickButtonText}>Delete</ThemedText>}
+              name="line.3.horizontal.decrease.circle"
+              size={35}
+              type="monochrome"
+              tintColor="#000000"
+              fallback={<ThemedText style={styles.quickButtonText}>Filter</ThemedText>}
               />
             </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -822,7 +796,7 @@ export default function ScanHistoryScreen() {
           />
           <View style={styles.quickFilters}>
             {[
-              { key: 'all', label: 'All', symbol: 'list.bullet' as const },
+              // { key: 'all', label: 'All', symbol: 'list.bullet' as const },
               { key: 'safe', label: 'Safe', symbol: 'checkmark.shield.fill' as const },
               { key: 'unsafe', label: 'Unsafe', symbol: 'xmark.shield.fill' as const },
               { key: 'unknown', label: 'Unknown', symbol: 'questionmark.circle.fill' as const }
@@ -834,23 +808,25 @@ export default function ScanHistoryScreen() {
                   { 
                     backgroundColor: selectedFilter === filter.key ? getStatusColor(filter.key === 'all' ? 'safe' : filter.key) : 'transparent',
                     borderColor: getStatusColor(filter.key === 'all' ? 'safe' : filter.key),
-                    borderWidth: 2
+                    borderWidth: 1.5
                   }
                 ]}
                 onPress={() => setSelectedFilter(filter.key as any)}
               >
                 <View style={styles.filterButtonContent}>
-                  <SymbolView
-                    name={filter.symbol}
-                    size={16}
-                    type="hierarchical"
-                    tintColor={selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key)}
-                    fallback={
-                    <ThemedText style={{ color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }}>
-                        {filter.key === 'all' ? 'All' : filter.key === 'safe' ? 'Safe' : filter.key === 'unsafe' ? 'Unsafe' : 'Unknown'}
-                      </ThemedText>
-                    }
-                  />
+                  {filter.key === 'all' && (
+                    <SymbolView
+                      name={filter.symbol}
+                      size={16}
+                      type="hierarchical"
+                      tintColor={selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key)}
+                      fallback={
+                      <ThemedText style={{ color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }}>
+                          All
+                        </ThemedText>
+                      }
+                    />
+                  )}
                   <ThemedText style={[
                     styles.quickFilterText,
                     { color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }
