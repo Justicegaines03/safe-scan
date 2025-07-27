@@ -68,6 +68,7 @@ export default function ScanHistoryScreen() {
   const [selectedEntry, setSelectedEntry] = useState<ScanHistoryEntry | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [editingTag, setEditingTag] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -475,6 +476,134 @@ export default function ScanHistoryScreen() {
     );
   };
 
+  const exportToCSV = async () => {
+    try {
+      const csvHeader = 'ID,QR Data,URL,Timestamp,Date,Safety Status,VirusTotal Secure,VirusTotal Positives,VirusTotal Total,Community Safe Votes,Community Unsafe Votes,Community Confidence,User Tag,Scan Duration (ms)\n';
+      
+      const csvRows = history.map(entry => {
+        const date = new Date(entry.timestamp).toISOString();
+        const url = entry.url || '';
+        const vtSecure = entry.virusTotalResult?.isSecure || '';
+        const vtPositives = entry.virusTotalResult?.positives || '';
+        const vtTotal = entry.virusTotalResult?.total || '';
+        const communitySafe = entry.communityRating?.safeVotes || '';
+        const communityUnsafe = entry.communityRating?.unsafeVotes || '';
+        const communityConf = entry.communityRating?.confidence || '';
+        const userTag = entry.userTag || '';
+        const scanDuration = entry.scanDuration || '';
+        
+        // Escape quotes and commas in data
+        const escapeCSV = (field: any) => {
+          const str = String(field);
+          if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        };
+        
+        return `${escapeCSV(entry.id)},${escapeCSV(entry.qrData)},${escapeCSV(url)},${entry.timestamp},${escapeCSV(date)},${escapeCSV(entry.safetyStatus)},${escapeCSV(vtSecure)},${escapeCSV(vtPositives)},${escapeCSV(vtTotal)},${escapeCSV(communitySafe)},${escapeCSV(communityUnsafe)},${escapeCSV(communityConf)},${escapeCSV(userTag)},${escapeCSV(scanDuration)}`;
+      }).join('\n');
+      
+      const csvContent = csvHeader + csvRows;
+      const fileName = `safescan_history_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      if (Platform.OS === 'web') {
+        // For web, create download
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // For mobile, use Share API
+        const result = await Share.share({
+          message: csvContent,
+          title: 'SafeScan History CSV Export'
+        });
+        
+        // Only show success if share was not dismissed/cancelled
+        if (result.action === Share.sharedAction) {
+          Alert.alert('Success', `Exported ${history.length} scans to CSV format`);
+        }
+        return; // Exit early to avoid showing alert below
+      }
+      
+      Alert.alert('Success', `Exported ${history.length} scans to CSV format`);
+    } catch (error) {
+      console.error('CSV Export Error:', error);
+      Alert.alert('Error', 'Failed to export CSV file');
+    }
+  };
+
+  const exportToJSON = async () => {
+    try {
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        exportFormat: 'JSON',
+        appVersion: '1.0.0',
+        totalEntries: history.length,
+        entries: history
+      };
+      
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const fileName = `safescan_history_${new Date().toISOString().split('T')[0]}.json`;
+      
+      if (Platform.OS === 'web') {
+        // For web, create download
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // For mobile, use Share API
+        const result = await Share.share({
+          message: jsonString,
+          title: 'SafeScan History JSON Export'
+        });
+        
+        // Only show success if share was not dismissed/cancelled
+        if (result.action === Share.sharedAction) {
+          Alert.alert('Success', `Exported ${history.length} scans to JSON format`);
+        }
+        return; // Exit early to avoid showing alert below
+      }
+      
+      Alert.alert('Success', `Exported ${history.length} scans to JSON format`);
+    } catch (error) {
+      console.error('JSON Export Error:', error);
+      Alert.alert('Error', 'Failed to export JSON file');
+    }
+  };
+
+  const getStorageInfo = async () => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const safeScanKeys = keys.filter(key => key.includes('safe_scan'));
+      
+      let totalSize = 0;
+      for (const key of safeScanKeys) {
+        const value = await AsyncStorage.getItem(key);
+        if (value) {
+          totalSize += new Blob([value]).size;
+        }
+      }
+      
+      const sizeInKB = (totalSize / 1024).toFixed(2);
+      
+      Alert.alert(
+        'Storage Information',
+        `History Entries: ${history.length}\nStorage Keys: ${safeScanKeys.length}\nApproximate Size: ${sizeInKB} KB\n\nOldest Entry: ${history.length > 0 ? new Date(Math.min(...history.map(h => h.timestamp))).toLocaleDateString() : 'None'}\nNewest Entry: ${history.length > 0 ? new Date(Math.max(...history.map(h => h.timestamp))).toLocaleDateString() : 'None'}`
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to retrieve storage information');
+    }
+  };
+
   const formatTimestamp = (timestamp: number) => {
     const now = Date.now();
     const diff = now - timestamp;
@@ -721,6 +850,133 @@ export default function ScanHistoryScreen() {
     </Modal>
   );
 
+  const renderSettingsModal = () => (
+    <Modal
+      visible={showSettings}
+      animationType="slide"
+      onRequestClose={() => setShowSettings(false)}
+    >
+      <ThemedView style={styles.modalContainer}>
+        <ScrollView style={styles.detailsContent}>
+          <View style={styles.detailsHeader}>
+            <View style={styles.headerSpacer} />
+            <ThemedText type="subtitle" style={styles.centeredTitle}>Settings</ThemedText>
+            <TouchableOpacity
+              onPress={() => setShowSettings(false)}
+              style={styles.doneButton}
+            >
+              <ThemedText style={styles.doneButtonText}>Done</ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Data Export Section */}
+          <ThemedText style={styles.firstSectionTitle}>Data Export</ThemedText>
+          
+          <TouchableOpacity
+            style={styles.settingsListItem}
+            onPress={exportToCSV}
+          >
+            <View style={styles.settingsItemContent}>
+              <View style={styles.settingsItemTextContainer}>
+                <ThemedText style={styles.settingsItemTitle}>Export as CSV</ThemedText>
+                <ThemedText style={styles.settingsItemSubtitle}>
+                  Download scan history in spreadsheet format
+                </ThemedText>
+              </View>
+              <ThemedText style={styles.chevronText}>›</ThemedText>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingsListItem}
+            onPress={exportToJSON}
+          >
+            <View style={styles.settingsItemContent}>
+              <View style={styles.settingsItemTextContainer}>
+                <ThemedText style={styles.settingsItemTitle}>Export as JSON</ThemedText>
+                <ThemedText style={styles.settingsItemSubtitle}>
+                  Download full data with metadata
+                </ThemedText>
+              </View>
+              <ThemedText style={styles.chevronText}>›</ThemedText>
+            </View>
+          </TouchableOpacity>
+
+          {/* Data Management Section */}
+          <ThemedText style={styles.settingsSectionTitle}>Data Management</ThemedText>
+          
+          <TouchableOpacity
+            style={styles.settingsListItem}
+            onPress={getStorageInfo}
+          >
+            <View style={styles.settingsItemContent}>
+              <View style={styles.settingsItemTextContainer}>
+                <ThemedText style={styles.settingsItemTitle}>Storage Information</ThemedText>
+                <ThemedText style={styles.settingsItemSubtitle}>
+                  View data usage and statistics
+                </ThemedText>
+              </View>
+              <ThemedText style={styles.chevronText}>›</ThemedText>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingsListItem}
+            onPress={() => {
+              clearHistory();
+            }}
+          >
+            <View style={styles.settingsItemContent}>
+              <View style={styles.settingsItemTextContainer}>
+                <ThemedText style={styles.settingsItemTitle}>Clear All History</ThemedText>
+                <ThemedText style={styles.settingsItemSubtitle}>
+                  Permanently delete all scan records
+                </ThemedText>
+              </View>
+              <ThemedText style={styles.chevronText}>›</ThemedText>
+            </View>
+          </TouchableOpacity>
+
+          {/* Privacy Section */}
+          <ThemedText style={styles.settingsSectionTitle}>Privacy</ThemedText>
+          
+          <TouchableOpacity
+            style={styles.settingsListItem}
+            onPress={() => {
+              Alert.alert(
+                'Privacy Information',
+                'SafeScan processes QR codes locally on your device. Scan history is stored only on your device and is not transmitted to external servers unless you explicitly export it.\n\nVirusTotal integration (when available) may send URLs to VirusTotal for security analysis. Community ratings are aggregated anonymously.',
+                [{ text: 'OK' }]
+              );
+            }}
+          >
+            <View style={styles.settingsItemContent}>
+              <View style={styles.settingsItemTextContainer}>
+                <ThemedText style={styles.settingsItemTitle}>Privacy Policy</ThemedText>
+                <ThemedText style={styles.settingsItemSubtitle}>
+                  How we handle your data
+                </ThemedText>
+              </View>
+              <ThemedText style={styles.chevronText}>›</ThemedText>
+            </View>
+          </TouchableOpacity>
+
+          {/* Logo and Version Footer */}
+          <View style={styles.logoFooter}>
+            <Image 
+              source={require('@/assets/images/Icon-Light.png')} 
+              style={styles.footerLogoImage}
+              resizeMode="contain"
+            />
+            <View style={styles.versionContainer}>
+              <ThemedText style={styles.versionText}>Version 1.0.0</ThemedText>
+            </View>
+          </View>
+        </ScrollView>
+      </ThemedView>
+    </Modal>
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadHistory();
@@ -751,10 +1007,7 @@ export default function ScanHistoryScreen() {
         </View>
         <TouchableOpacity 
           style={styles.settingsButton}
-          onPress={() => {
-            // Add settings functionality here
-            console.log('Settings pressed');
-          }}
+          onPress={() => setShowSettings(true)}
         >
           <SymbolView 
             name="gear" 
@@ -884,6 +1137,7 @@ export default function ScanHistoryScreen() {
 
       {renderDetailsModal()}
       {renderTagEditModal()}
+      {renderSettingsModal()}
     </ThemedView>
   );
 }
@@ -1135,10 +1389,11 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
   },
   detailsContent: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 16,
   },
   detailsHeader: {
     flexDirection: 'row',
@@ -1146,6 +1401,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingHorizontal: 16,
   },
   closeButton: {
     padding: 8,
@@ -1246,5 +1502,173 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  settingsSection: {
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+  },
+  settingsSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    marginTop: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f5f5f5',
+    color: '#666666',
+  },
+  firstSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    marginTop: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f5f5f5',
+    color: '#666666',
+  },
+  settingsOptionButton: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  settingsButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingsButtonIcon: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  settingsButtonTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  settingsButtonTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  settingsButtonSubtitle: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    opacity: 0.9,
+    lineHeight: 18,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+  },
+  settingsFooter: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingBottom: 40,
+  },
+  footerText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  footerSubtext: {
+    fontSize: 12,
+    opacity: 0.6,
+    textAlign: 'center',
+  },
+  settingsListItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E5E7',
+    backgroundColor: '#ffffff',
+  },
+  settingsItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingsItemIcon: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  settingsItemTextContainer: {
+    flex: 1,
+  },
+  settingsItemTitle: {
+    fontSize: 16,
+    fontWeight: 'normal',
+    marginBottom: 2,
+  },
+  settingsItemSubtitle: {
+    fontSize: 13,
+    opacity: 0.6,
+    lineHeight: 18,
+  },
+  chevronText: {
+    fontSize: 18,
+    opacity: 0.4,
+    fontWeight: '300',
+  },
+  headerSpacer: {
+    width: 60, // Same width as the Done button to balance the layout
+  },
+  centeredTitle: {
+    textAlign: 'center',
+    flex: 1,
+  },
+  doneButton: {
+    padding: 8,
+    width: 60,
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  logoFooter: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginTop: 20,
+  },
+  footerLogoImage: {
+    width: 60,
+    height: 60,
+    marginBottom: 16,
+  },
+  versionContainer: {
+    alignItems: 'center',
+  },
+  versionText: {
+    fontSize: 16,
+    fontWeight: 'normal',
+    color: '#666666',
   },
 });

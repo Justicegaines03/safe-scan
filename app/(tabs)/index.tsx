@@ -12,8 +12,10 @@ import {
   ScrollView,
   Platform,
   Linking,
-  Image
+  Image,
+  Share
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PanGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { 
   useAnimatedStyle, 
@@ -81,6 +83,7 @@ export default function CameraScannerScreen() {
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualUrl, setManualUrl] = useState('');
   const [scanCount, setScanCount] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
 
   const colors = Colors[colorScheme ?? 'light'];
@@ -264,6 +267,160 @@ export default function CameraScannerScreen() {
     setCameraType(current => current === 'back' ? 'front' : 'back');
   };
 
+  // Settings functionality - shared with explore tab
+  const STORAGE_KEY = '@safe_scan_history';
+
+  const getHistoryFromStorage = async () => {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error loading history:', error);
+      return [];
+    }
+  };
+
+  const exportToCSV = async () => {
+    try {
+      const history = await getHistoryFromStorage();
+      const csvHeader = 'ID,QR Data,URL,Timestamp,Date,Safety Status,VirusTotal Secure,VirusTotal Positives,VirusTotal Total,Community Safe Votes,Community Unsafe Votes,Community Confidence,User Tag,Scan Duration (ms)\n';
+      
+      const csvRows = history.map((entry: any) => {
+        const date = new Date(entry.timestamp).toISOString();
+        const url = entry.url || '';
+        const vtSecure = entry.virusTotalResult?.isSecure || '';
+        const vtPositives = entry.virusTotalResult?.positives || '';
+        const vtTotal = entry.virusTotalResult?.total || '';
+        const communitySafe = entry.communityRating?.safeVotes || '';
+        const communityUnsafe = entry.communityRating?.unsafeVotes || '';
+        const communityConf = entry.communityRating?.confidence || '';
+        const userTag = entry.userTag || '';
+        const scanDuration = entry.scanDuration || '';
+        
+        // Escape quotes and commas in data
+        const escapeCSV = (field: any) => {
+          const str = String(field);
+          if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        };
+        
+        return `${escapeCSV(entry.id)},${escapeCSV(entry.qrData)},${escapeCSV(url)},${entry.timestamp},${escapeCSV(date)},${escapeCSV(entry.safetyStatus)},${escapeCSV(vtSecure)},${escapeCSV(vtPositives)},${escapeCSV(vtTotal)},${escapeCSV(communitySafe)},${escapeCSV(communityUnsafe)},${escapeCSV(communityConf)},${escapeCSV(userTag)},${escapeCSV(scanDuration)}`;
+      }).join('\n');
+      
+      const csvContent = csvHeader + csvRows;
+      const fileName = `safescan_history_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      if (Platform.OS === 'web') {
+        // For web, create download
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // For mobile, use Share API
+        await Share.share({
+          message: csvContent,
+          title: 'SafeScan History CSV Export'
+        });
+      }
+      
+      Alert.alert('Success', `Exported ${history.length} scans to CSV format`);
+    } catch (error) {
+      console.error('CSV Export Error:', error);
+      Alert.alert('Error', 'Failed to export CSV file');
+    }
+  };
+
+  const exportToJSON = async () => {
+    try {
+      const history = await getHistoryFromStorage();
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        exportFormat: 'JSON',
+        appVersion: '1.0.0',
+        totalEntries: history.length,
+        entries: history
+      };
+      
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const fileName = `safescan_history_${new Date().toISOString().split('T')[0]}.json`;
+      
+      if (Platform.OS === 'web') {
+        // For web, create download
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // For mobile, use Share API
+        await Share.share({
+          message: jsonString,
+          title: 'SafeScan History JSON Export'
+        });
+      }
+      
+      Alert.alert('Success', `Exported ${history.length} scans to JSON format`);
+    } catch (error) {
+      console.error('JSON Export Error:', error);
+      Alert.alert('Error', 'Failed to export JSON file');
+    }
+  };
+
+  const getStorageInfo = async () => {
+    try {
+      const history = await getHistoryFromStorage();
+      const keys = await AsyncStorage.getAllKeys();
+      const safeScanKeys = keys.filter(key => key.includes('safe_scan'));
+      
+      let totalSize = 0;
+      for (const key of safeScanKeys) {
+        const value = await AsyncStorage.getItem(key);
+        if (value) {
+          totalSize += new Blob([value]).size;
+        }
+      }
+      
+      const sizeInKB = (totalSize / 1024).toFixed(2);
+      
+      Alert.alert(
+        'Storage Information',
+        `History Entries: ${history.length}\nStorage Keys: ${safeScanKeys.length}\nApproximate Size: ${sizeInKB} KB\n\nOldest Entry: ${history.length > 0 ? new Date(Math.min(...history.map((h: any) => h.timestamp))).toLocaleDateString() : 'None'}\nNewest Entry: ${history.length > 0 ? new Date(Math.max(...history.map((h: any) => h.timestamp))).toLocaleDateString() : 'None'}`
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to retrieve storage information');
+    }
+  };
+
+  const clearHistory = () => {
+    Alert.alert(
+      'Clear History',
+      'Are you sure you want to clear all scan history? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem(STORAGE_KEY);
+              Alert.alert('Success', 'All scan history has been cleared');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear history');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const openLink = async (url: string) => {
     try {
       console.log('Attempting to open URL:', url);
@@ -400,10 +557,7 @@ export default function CameraScannerScreen() {
             </View>
             <TouchableOpacity 
               style={styles.settingsButton}
-              onPress={() => {
-                // Add settings functionality here
-                console.log('Settings pressed');
-              }}
+              onPress={() => setShowSettings(true)}
             >
               <SymbolView 
                 name="gear" 
