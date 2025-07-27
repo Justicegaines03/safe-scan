@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 65 : 20,
+    top: 0, // Changed to 0 to reach the very top
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -627,6 +627,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     zIndex: 10, // Ensure it's above everything
+    backgroundColor: '#007031', // Green background to match app theme
+    paddingVertical: 12,
+    paddingTop: Platform.OS === 'ios' ? 60 : 25, // Add top padding for status bar/notch
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
   },
   logoTextContainer: {
     flexDirection: 'row',
@@ -661,7 +666,7 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 115 : 75, // Reduced padding to bring camera closer to header
+    paddingTop: Platform.OS === 'ios' ? 110 : 80, // Adjusted for new header position
     backgroundColor: '#007031', // Changed to green
     },
     camera: {

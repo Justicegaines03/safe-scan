@@ -11,6 +11,8 @@ import {
   RefreshControl,
   Platform,
   Share,
+  Text,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
@@ -78,22 +80,18 @@ export default function ScanHistoryScreen() {
   const loadHistory = async () => {
     try {
       setIsLoading(true);
-      const storedHistory = await AsyncStorage.getItem(STORAGE_KEY);
-      if (storedHistory) {
-        const parsed: ScanHistoryEntry[] = JSON.parse(storedHistory);
-        // Quick cleanup - keep last 100 entries for speed
-        const recentHistory = parsed
-          .sort((a, b) => b.timestamp - a.timestamp)
-          .slice(0, 100);
-        setHistory(recentHistory);
-      } else {
-        // No mock data - start fresh for real testing
-        setHistory([]);
-      }
+      
+      // Force regenerate mock data to ensure consistency between devices
+      const mockData = generateMockHistory();
+      setHistory(mockData);
+      // Save the mock data
+      await saveHistory(mockData);
+      
     } catch (error) {
       console.error('Error loading history:', error);
-      // Quick fail - don't show alert for speed
-      setHistory([]);
+      // Generate mock data on error for development
+      const mockData = generateMockHistory();
+      setHistory(mockData);
     } finally {
       setIsLoading(false);
     }
@@ -108,23 +106,24 @@ export default function ScanHistoryScreen() {
   };
 
   const generateMockHistory = (): ScanHistoryEntry[] => {
+    const now = Date.now();
     const mockEntries: ScanHistoryEntry[] = [
       {
         id: '1',
         qrData: 'https://www.google.com',
         url: 'https://www.google.com',
-        timestamp: Date.now() - 3600000, // 1 hour ago
+        timestamp: now - 300000, // 5 minutes ago
         safetyStatus: 'safe',
         virusTotalResult: { 
           isSecure: true, 
           positives: 0, 
-          total: 70, 
+          total: 72, 
           scanId: 'scan1',
           permalink: 'https://virustotal.com/scan1'
         },
         communityRating: {
-          confidence: 0.95,
-          safeVotes: 19,
+          confidence: 0.98,
+          safeVotes: 45,
           unsafeVotes: 1
         },
         userTag: 'safe',
@@ -132,61 +131,219 @@ export default function ScanHistoryScreen() {
       },
       {
         id: '2',
-        qrData: 'http://suspicious-site.com/malware',
-        url: 'http://suspicious-site.com/malware',
-        timestamp: Date.now() - 7200000, // 2 hours ago
+        qrData: 'http://malicious-phishing-site.com/steal-data',
+        url: 'http://malicious-phishing-site.com/steal-data',
+        timestamp: now - 1800000, // 30 minutes ago
         safetyStatus: 'unsafe',
         virusTotalResult: { 
           isSecure: false, 
-          positives: 15, 
+          positives: 28, 
           total: 70,
           scanId: 'scan2',
           permalink: 'https://virustotal.com/scan2'
         },
         communityRating: {
-          confidence: 0.2,
-          safeVotes: 2,
-          unsafeVotes: 8
+          confidence: 0.15,
+          safeVotes: 1,
+          unsafeVotes: 12
         },
         userTag: 'unsafe',
-        scanDuration: 2100
+        scanDuration: 2800
       },
       {
         id: '3',
-        qrData: 'Contact: John Doe\nPhone: +1-555-123-4567\nEmail: john@example.com',
-        timestamp: Date.now() - 86400000, // 1 day ago
+        qrData: 'WiFi:T:WPA;S:CoffeeShop_Free;P:password123;H:false;;',
+        timestamp: now - 3600000, // 1 hour ago
         safetyStatus: 'unknown',
         userTag: null,
-        scanDuration: 800
+        scanDuration: 650
       },
       {
         id: '4',
         qrData: 'https://github.com/facebook/react-native',
         url: 'https://github.com/facebook/react-native',
-        timestamp: Date.now() - 172800000, // 2 days ago
+        timestamp: now - 7200000, // 2 hours ago
+        safetyStatus: 'safe',
+        virusTotalResult: { 
+          isSecure: true, 
+          positives: 0, 
+          total: 68,
+          scanId: 'scan3',
+          permalink: 'https://virustotal.com/scan3'
+        },
+        communityRating: {
+          confidence: 0.92,
+          safeVotes: 23,
+          unsafeVotes: 2
+        },
+        userTag: 'safe',
+        scanDuration: 980
+      },
+      {
+        id: '5',
+        qrData: 'BEGIN:VCARD\nVERSION:3.0\nFN:John Smith\nORG:Tech Corp\nTEL:+1-555-123-4567\nEMAIL:john@techcorp.com\nEND:VCARD',
+        timestamp: now - 14400000, // 4 hours ago
+        safetyStatus: 'unknown',
+        userTag: 'safe',
+        scanDuration: 450
+      },
+      {
+        id: '6',
+        qrData: 'https://suspicious-shortened-url.bit.ly/x7h2k9',
+        url: 'https://suspicious-shortened-url.bit.ly/x7h2k9',
+        timestamp: now - 21600000, // 6 hours ago
+        safetyStatus: 'unsafe',
+        virusTotalResult: { 
+          isSecure: false, 
+          positives: 8, 
+          total: 65,
+          scanId: 'scan4',
+          permalink: 'https://virustotal.com/scan4'
+        },
+        communityRating: {
+          confidence: 0.35,
+          safeVotes: 3,
+          unsafeVotes: 7
+        },
+        userTag: null,
+        scanDuration: 3200
+      },
+      {
+        id: '7',
+        qrData: 'https://www.netflix.com/browse',
+        url: 'https://www.netflix.com/browse',
+        timestamp: now - 43200000, // 12 hours ago
+        safetyStatus: 'safe',
+        virusTotalResult: { 
+          isSecure: true, 
+          positives: 0, 
+          total: 71,
+          scanId: 'scan5',
+          permalink: 'https://virustotal.com/scan5'
+        },
+        communityRating: {
+          confidence: 0.95,
+          safeVotes: 38,
+          unsafeVotes: 2
+        },
+        userTag: 'safe',
+        scanDuration: 1100
+      },
+      {
+        id: '8',
+        qrData: 'tel:+1-800-555-0199',
+        timestamp: now - 86400000, // 1 day ago
+        safetyStatus: 'unknown',
+        userTag: null,
+        scanDuration: 320
+      },
+      {
+        id: '9',
+        qrData: 'https://crypto-scam-investment.com/get-rich-quick',
+        url: 'https://crypto-scam-investment.com/get-rich-quick',
+        timestamp: now - 172800000, // 2 days ago
+        safetyStatus: 'unsafe',
+        virusTotalResult: { 
+          isSecure: false, 
+          positives: 35, 
+          total: 69,
+          scanId: 'scan6',
+          permalink: 'https://virustotal.com/scan6'
+        },
+        communityRating: {
+          confidence: 0.08,
+          safeVotes: 0,
+          unsafeVotes: 15
+        },
+        userTag: 'unsafe',
+        scanDuration: 4500
+      },
+      {
+        id: '10',
+        qrData: 'https://stackoverflow.com/questions/react-native',
+        url: 'https://stackoverflow.com/questions/react-native',
+        timestamp: now - 259200000, // 3 days ago
         safetyStatus: 'safe',
         virusTotalResult: { 
           isSecure: true, 
           positives: 0, 
           total: 70,
-          scanId: 'scan3',
-          permalink: 'https://virustotal.com/scan3'
+          scanId: 'scan7',
+          permalink: 'https://virustotal.com/scan7'
         },
         communityRating: {
-          confidence: 0.88,
-          safeVotes: 15,
+          confidence: 0.89,
+          safeVotes: 17,
           unsafeVotes: 2
         },
-        userTag: 'safe',
-        scanDuration: 950
+        userTag: null,
+        scanDuration: 850
       },
       {
-        id: '5',
-        qrData: 'WiFi:T:WPA;S:MyNetwork;P:password123;;',
-        timestamp: Date.now() - 259200000, // 3 days ago
+        id: '11',
+        qrData: 'WIFI:T:WPA2;S:HomeNetwork5G;P:supersecurepassword2023;H:true;;',
+        timestamp: now - 345600000, // 4 days ago
+        safetyStatus: 'unknown',
+        userTag: 'safe',
+        scanDuration: 580
+      },
+      {
+        id: '12',
+        qrData: 'mailto:support@legitcompany.com?subject=Product%20Inquiry&body=Hello%20team',
+        timestamp: now - 432000000, // 5 days ago
         safetyStatus: 'unknown',
         userTag: null,
-        scanDuration: 600
+        scanDuration: 410
+      },
+      {
+        id: '13',
+        qrData: 'https://fake-bank-login.phishing-site.ru/secure',
+        url: 'https://fake-bank-login.phishing-site.ru/secure',
+        timestamp: now - 518400000, // 6 days ago
+        safetyStatus: 'unsafe',
+        virusTotalResult: { 
+          isSecure: false, 
+          positives: 42, 
+          total: 68,
+          scanId: 'scan8',
+          permalink: 'https://virustotal.com/scan8'
+        },
+        communityRating: {
+          confidence: 0.02,
+          safeVotes: 0,
+          unsafeVotes: 25
+        },
+        userTag: 'unsafe',
+        scanDuration: 5200
+      },
+      {
+        id: '14',
+        qrData: 'https://www.apple.com/iphone',
+        url: 'https://www.apple.com/iphone',
+        timestamp: now - 604800000, // 7 days ago
+        safetyStatus: 'safe',
+        virusTotalResult: { 
+          isSecure: true, 
+          positives: 0, 
+          total: 73,
+          scanId: 'scan9',
+          permalink: 'https://virustotal.com/scan9'
+        },
+        communityRating: {
+          confidence: 0.97,
+          safeVotes: 52,
+          unsafeVotes: 1
+        },
+        userTag: 'safe',
+        scanDuration: 920
+      },
+      {
+        id: '15',
+        qrData: 'Event: Team Meeting\nDate: 2024-01-15\nTime: 2:00 PM\nLocation: Conference Room A\nNotes: Bring laptop and quarterly reports',
+        timestamp: now - 691200000, // 8 days ago
+        safetyStatus: 'unknown',
+        userTag: null,
+        scanDuration: 380
       }
     ];
     return mockEntries;
@@ -533,6 +690,32 @@ export default function ScanHistoryScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      {/* Header with SafeScan logo and settings (copied from scanner tab) */}
+      <View style={styles.headerContainer}>
+        <View style={styles.logoTextContainer}>
+          <Image 
+            source={require('@/assets/images/Icon-Light.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={[styles.logoText, { marginLeft: 2 }]}>SafeScan</Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.settingsButton}
+          onPress={() => {
+            // Add settings functionality here
+            console.log('Settings pressed');
+          }}
+        >
+          <SymbolView 
+            name="gear" 
+            size={35}
+            tintColor="#FFFFFF" 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* History section with title and action icons (below main header) */}
       <View style={styles.header}>
         <ThemedText type="title" style={styles.headerTitle}>History</ThemedText>
         <View style={styles.headerActions}>
@@ -685,6 +868,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerContainer: {
+    position: 'absolute',
+    top: 0, // Changed to 0 to reach the very top
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 10,
+    backgroundColor: '#007031', // Green background to match app theme
+    paddingVertical: 12,
+    paddingTop: Platform.OS === 'ios' ? 60 : 25, // Add top padding for status bar/notch
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+  },
+  logoTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoImage: {
+    width: 40,
+    height: 40,
+  },
+  logoText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fffb00',
+    marginLeft: 8,
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -695,7 +916,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    paddingTop: Platform.OS === 'ios' ? 130 : 100, // Increased padding for more space from green header
   },
   headerTitle: {
     fontSize: 28,
