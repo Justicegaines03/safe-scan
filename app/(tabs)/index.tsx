@@ -11,7 +11,8 @@ import {
   TextInput,
   ScrollView,
   Platform,
-  Linking
+  Linking,
+  Image
 } from 'react-native';
 import { PanGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { 
@@ -387,6 +388,31 @@ export default function CameraScannerScreen() {
     return (
       <GestureHandlerRootView style={styles.container}>
         <ThemedView style={styles.container}>
+          {/* Header with logo and settings */}
+          <View style={styles.headerContainer}>
+            <View style={styles.logoTextContainer}>
+              <Image 
+              source={require('@/assets/images/Icon-Light.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+              />
+              <Text style={[styles.logoText, { marginLeft: 2 }]}>SafeScan</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.settingsButton}
+              onPress={() => {
+                // Add settings functionality here
+                console.log('Settings pressed');
+              }}
+            >
+              <SymbolView 
+                name="gear" 
+                size={35}
+                tintColor="#FFFFFF" 
+              />
+            </TouchableOpacity>
+          </View>
+
           {/* Camera background */}
           <View style={styles.cameraContainer}>
             <CameraView
@@ -489,6 +515,16 @@ export default function CameraScannerScreen() {
                   <Text style={styles.actionButtonText}>Open</Text>
                 </TouchableOpacity>
               </View>
+
+              {isValidating && (
+                <View style={styles.cameraLoadingOverlay}>
+                  <ActivityIndicator size="large" color="#00E676" />
+                  <ThemedText style={styles.loadingText}>⚡ Analyzing QR code...</ThemedText>
+                  <ThemedText style={[styles.loadingText, { fontSize: 14, marginTop: 4, opacity: 0.8 }]}>
+                    Checking with security databases
+                  </ThemedText>
+                </View>
+              )}
             </CameraView>
           </View>
         </ThemedView>
@@ -499,6 +535,31 @@ export default function CameraScannerScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <ThemedView style={styles.container}>
+        {/* Header with logo and settings */}
+        <View style={styles.headerContainer}>
+          <View style={styles.logoTextContainer}>
+            <Image 
+              source={require('@/assets/images/Icon-Light.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoText}>SafeScan</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={() => {
+              // Add settings functionality here
+              console.log('Settings pressed');
+            }}
+          >
+            <SymbolView 
+              name="gear" 
+              size={24}
+              tintColor="#FFFFFF" 
+            />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.cameraContainer}>
           <CameraView
             style={styles.camera}
@@ -516,6 +577,16 @@ export default function CameraScannerScreen() {
               <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
               </ThemedText>
             </View>
+
+            {isValidating && (
+              <View style={styles.cameraLoadingOverlay}>
+                <ActivityIndicator size="large" color="#00E676" />
+                <ThemedText style={styles.loadingText}>⚡ Analyzing QR code...</ThemedText>
+                <ThemedText style={[styles.loadingText, { fontSize: 14, marginTop: 4, opacity: 0.8 }]}>
+                  Checking with security databases
+                </ThemedText>
+              </View>
+            )}
           </CameraView>
         </View>
 
@@ -541,16 +612,6 @@ export default function CameraScannerScreen() {
             <Text style={styles.buttonText}>Test Link</Text>
           </TouchableOpacity>
         </ThemedView>
-
-        {isValidating && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#00E676" />
-            <ThemedText style={styles.loadingText}>⚡ Analyzing QR code...</ThemedText>
-            <ThemedText style={[styles.loadingText, { fontSize: 14, marginTop: 4, opacity: 0.8 }]}>
-              Checking with security databases
-            </ThemedText>
-          </View>
-        )}
       </ThemedView>
     </GestureHandlerRootView>
   );
@@ -560,6 +621,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 65 : 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 10, // Ensure it's above everything
+  },
+  logoTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoImage: {
+    width: 40,
+    height: 40,
+  },
+
+  logoText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fffb00',
+    marginLeft: 8,
+  },
+
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    
+  },
   iconSize: {
     fontSize: 20, // Changed from 18 to 20 - you can adjust this value
   },
@@ -568,12 +665,13 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 110 : 30, // Add top padding for status bar spacing
-  },
-  camera: {
+    paddingTop: Platform.OS === 'ios' ? 115 : 75, // Reduced padding to bring camera closer to header
+    backgroundColor: '#007031', // Changed to green
+    },
+    camera: {
     flex: 1,
-  },
-  cameraDarkenOverlay: {
+    },
+    cameraDarkenOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -979,5 +1077,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#00AA00',
     marginBottom: 2,
+  },
+  cameraLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2, // Ensure it's above the camera overlay but below other elements
   },
 });
