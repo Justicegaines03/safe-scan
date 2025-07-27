@@ -155,6 +155,11 @@ export default function ScanHistoryScreen() {
         qrData: 'WiFi:T:WPA;S:CoffeeShop_Free;P:password123;H:false;;',
         timestamp: now - 3600000, // 1 hour ago
         safetyStatus: 'unknown',
+        communityRating: {
+          confidence: 0.5,
+          safeVotes: 0,
+          unsafeVotes: 0
+        },
         userTag: null,
         scanDuration: 650
       },
@@ -184,6 +189,11 @@ export default function ScanHistoryScreen() {
         qrData: 'BEGIN:VCARD\nVERSION:3.0\nFN:John Smith\nORG:Tech Corp\nTEL:+1-555-123-4567\nEMAIL:john@techcorp.com\nEND:VCARD',
         timestamp: now - 14400000, // 4 hours ago
         safetyStatus: 'unknown',
+        communityRating: {
+          confidence: 0.8,
+          safeVotes: 8,
+          unsafeVotes: 1
+        },
         userTag: 'safe',
         scanDuration: 450
       },
@@ -234,6 +244,11 @@ export default function ScanHistoryScreen() {
         qrData: 'tel:+1-800-555-0199',
         timestamp: now - 86400000, // 1 day ago
         safetyStatus: 'unknown',
+        communityRating: {
+          confidence: 0.6,
+          safeVotes: 3,
+          unsafeVotes: 2
+        },
         userTag: null,
         scanDuration: 320
       },
@@ -284,6 +299,11 @@ export default function ScanHistoryScreen() {
         qrData: 'WIFI:T:WPA2;S:HomeNetwork5G;P:supersecurepassword2023;H:true;;',
         timestamp: now - 345600000, // 4 days ago
         safetyStatus: 'unknown',
+        communityRating: {
+          confidence: 0.7,
+          safeVotes: 5,
+          unsafeVotes: 1
+        },
         userTag: 'safe',
         scanDuration: 580
       },
@@ -292,6 +312,11 @@ export default function ScanHistoryScreen() {
         qrData: 'mailto:support@legitcompany.com?subject=Product%20Inquiry&body=Hello%20team',
         timestamp: now - 432000000, // 5 days ago
         safetyStatus: 'unknown',
+        communityRating: {
+          confidence: 0.5,
+          safeVotes: 0,
+          unsafeVotes: 0
+        },
         userTag: null,
         scanDuration: 410
       },
@@ -342,6 +367,11 @@ export default function ScanHistoryScreen() {
         qrData: 'Event: Team Meeting\nDate: 2024-01-15\nTime: 2:00 PM\nLocation: Conference Room A\nNotes: Bring laptop and quarterly reports',
         timestamp: now - 691200000, // 8 days ago
         safetyStatus: 'unknown',
+        communityRating: {
+          confidence: 0.9,
+          safeVotes: 12,
+          unsafeVotes: 0
+        },
         userTag: null,
         scanDuration: 380
       }
@@ -467,10 +497,10 @@ export default function ScanHistoryScreen() {
   const getStatusIcon = (status: string) => {
     // High contrast icons for quick recognition
     switch (status) {
-      case 'safe': return '✅';
-      case 'unsafe': return '🚫';
-      case 'unknown': return '❔';
-      default: return '❔';
+      case 'safe': return '';
+      case 'unsafe': return '';
+      case 'unknown': return '';
+      default: return '';
     }
   };
 
@@ -489,8 +519,7 @@ export default function ScanHistoryScreen() {
       style={[styles.historyItem, { 
         backgroundColor: colors.background, 
         borderColor: getStatusColor(item.safetyStatus),
-        borderLeftWidth: 4,
-        borderWidth: 1
+        borderWidth: 1.5
       }]}
       onPress={() => {
         setSelectedEntry(item);
@@ -498,13 +527,11 @@ export default function ScanHistoryScreen() {
       }}
       activeOpacity={0.7}
     >
-      <View style={styles.itemHeader}>
+      {/* Safety status at the top */}
+      <View style={styles.topStatusContainer}>
         <View style={styles.statusContainer}>
-          <ThemedText style={[styles.statusIcon, { color: getStatusColor(item.safetyStatus) }]}>
-            {getStatusIcon(item.safetyStatus)}
-          </ThemedText>
-          <ThemedText style={[styles.statusText, { color: getStatusColor(item.safetyStatus) }]}>
-            {item.safetyStatus.toUpperCase()}
+          <ThemedText type="title" style={[styles.statusText, { fontSize: 20}]}>
+            {item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1)}
           </ThemedText>
           {/* Quick scan time indicator */}
           {item.scanDuration && (
@@ -518,23 +545,45 @@ export default function ScanHistoryScreen() {
         </ThemedText>
       </View>
       
+      {/* Link/QR Data in the middle */}
       <ThemedText style={styles.qrData} numberOfLines={1}>
         {truncateText(item.qrData, 60)}
       </ThemedText>
       
-      {/* Quick info row */}
-      <View style={styles.quickInfo}>
+      {/* VirusTotal score and Community votes below the link */}
+      <View style={styles.bottomScoresContainer}>
         {item.virusTotalResult && (
-          <View style={[styles.quickBadge, { backgroundColor: item.virusTotalResult.isSecure ? '#00E676' : '#FF1744' }]}>
-            <ThemedText style={styles.quickBadgeText}>
-              VT: {item.virusTotalResult.positives}/{item.virusTotalResult.total}
+          <View style={[
+            styles.scoreCard,
+            { backgroundColor: item.virusTotalResult.positives === 0 ? '#2E7D32' : '#C62828' }
+          ]}>
+            <SymbolView
+              name="shield.checkered"
+              size={16}
+              type="monochrome"
+              tintColor="#FFFFFF"
+              fallback={<ThemedText style={styles.scoreIcon}>VT</ThemedText>}
+            />
+            <ThemedText style={styles.scoreCardText}>
+              {item.virusTotalResult.positives === 0 ? ' Clean' : ' Threat'}
             </ThemedText>
           </View>
         )}
-        {item.userTag && (
-          <View style={[styles.quickBadge, { backgroundColor: getStatusColor(item.userTag) }]}>
-            <ThemedText style={styles.quickBadgeText}>
-              👤 {item.userTag}
+        {item.communityRating && (
+          <View style={styles.communityCard}>
+            <SymbolView
+              name="person.3"
+              size={23}
+              type="monochrome"
+              tintColor="#000000"
+              fallback={<ThemedText style={styles.scoreIcon}>U</ThemedText>}
+            />
+            <ThemedText style={styles.communityCardText}>
+              {item.communityRating.safeVotes + item.communityRating.unsafeVotes === 0 
+                ? '  No votes yet' 
+                : item.communityRating.safeVotes === 1 
+                  ? `  ${item.communityRating.safeVotes} safe vote`
+                  : `  ${item.communityRating.safeVotes} safe votes`}
             </ThemedText>
           </View>
         )}
@@ -559,7 +608,7 @@ export default function ScanHistoryScreen() {
                 onPress={() => setShowDetails(false)}
                 style={styles.closeButton}
               >
-                <ThemedText style={styles.closeButtonText}>✕</ThemedText>
+                <ThemedText style={styles.closeButtonText}>X</ThemedText>
               </TouchableOpacity>
             </View>
 
@@ -646,19 +695,19 @@ export default function ScanHistoryScreen() {
               style={[styles.tagOption, { backgroundColor: '#4CAF50' }]}
               onPress={() => editingTag && updateUserTag(editingTag, 'safe')}
             >
-              <ThemedText style={styles.tagOptionText}>✅ Safe</ThemedText>
+              <ThemedText style={styles.tagOptionText}>Safe</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tagOption, { backgroundColor: '#F44336' }]}
               onPress={() => editingTag && updateUserTag(editingTag, 'unsafe')}
             >
-              <ThemedText style={styles.tagOptionText}>⚠️ Unsafe</ThemedText>
+              <ThemedText style={styles.tagOptionText}>Unsafe</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tagOption, { backgroundColor: '#9E9E9E' }]}
               onPress={() => editingTag && updateUserTag(editingTag, null)}
             >
-              <ThemedText style={styles.tagOptionText}>🚫 Remove Tag</ThemedText>
+              <ThemedText style={styles.tagOptionText}>Remove Tag</ThemedText>
             </TouchableOpacity>
           </View>
           <TouchableOpacity
@@ -728,7 +777,7 @@ export default function ScanHistoryScreen() {
               size={24}
               type="monochrome"
               tintColor="#007AFF"
-              fallback={<ThemedText style={styles.quickButtonText}>🔍</ThemedText>}
+              fallback={<ThemedText style={styles.quickButtonText}>Search</ThemedText>}
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -740,7 +789,7 @@ export default function ScanHistoryScreen() {
               size={24}
               type="monochrome"
               tintColor="#007AFF"
-              fallback={<ThemedText style={styles.quickButtonText}>📤</ThemedText>}
+              fallback={<ThemedText style={styles.quickButtonText}>Export</ThemedText>}
             />
           </TouchableOpacity>
           {history.length > 0 && (
@@ -753,7 +802,7 @@ export default function ScanHistoryScreen() {
                 size={24}
                 type="monochrome"
                 tintColor="#007AFF"
-                fallback={<ThemedText style={styles.quickButtonText}>🗑️</ThemedText>}
+                fallback={<ThemedText style={styles.quickButtonText}>Delete</ThemedText>}
               />
             </TouchableOpacity>
           )}
@@ -797,8 +846,8 @@ export default function ScanHistoryScreen() {
                     type="hierarchical"
                     tintColor={selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key)}
                     fallback={
-                      <ThemedText style={{ color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }}>
-                        {filter.key === 'all' ? '📋' : filter.key === 'safe' ? '✅' : filter.key === 'unsafe' ? '🚫' : '❔'}
+                    <ThemedText style={{ color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }}>
+                        {filter.key === 'all' ? 'All' : filter.key === 'safe' ? 'Safe' : filter.key === 'unsafe' ? 'Unsafe' : 'Unknown'}
                       </ThemedText>
                     }
                   />
@@ -834,7 +883,6 @@ export default function ScanHistoryScreen() {
 
       {filteredHistory.length === 0 ? (
         <ThemedView style={styles.emptyContainer}>
-          <ThemedText style={styles.emptyIcon}>📱</ThemedText>
           <ThemedText style={styles.emptyTitle}>
             {history.length === 0 ? 'No scans yet!' : 'No matches found'}
           </ThemedText>
@@ -1025,7 +1073,12 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
     borderRadius: 8,
-    borderLeftWidth: 4,
+  },
+  topStatusContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -1042,7 +1095,6 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   statusText: {
-    fontSize: 12,
     fontWeight: 'bold',
   },
   timestamp: {
@@ -1055,49 +1107,43 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '500',
   },
-  quickInfo: {
-    flexDirection: 'row',
-    gap: 6,
+  bottomScoresContainer: {
+    gap: 4,
     marginTop: 4,
   },
-  quickBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+  scoreIcon: {
+    fontSize: 14,
   },
-  quickBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  itemFooter: {
+  scoreCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  userTag: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 12,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
   },
-  userTagText: {
-    color: '#fff',
-    fontSize: 10,
+  scoreCardText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '600',
   },
-  vtResult: {
-    fontSize: 10,
-    opacity: 0.7,
+  communityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    padding: 0,
+  },
+  communityCardText: {
+    color: '#000000',
+    fontSize: 12,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
