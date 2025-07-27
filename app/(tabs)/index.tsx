@@ -697,10 +697,7 @@ export default function CameraScannerScreen() {
           </View>
           <TouchableOpacity 
             style={styles.settingsButton}
-            onPress={() => {
-              // Add settings functionality here
-              console.log('Settings pressed');
-            }}
+            onPress={() => setShowSettings(true)}
           >
             <SymbolView 
               name="gear" 
@@ -763,6 +760,132 @@ export default function CameraScannerScreen() {
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
+
+      {/* Settings Modal */}
+      <Modal
+        visible={showSettings}
+        animationType="slide"
+        onRequestClose={() => setShowSettings(false)}
+      >
+        <ThemedView style={styles.modalContainer}>
+          <ScrollView style={styles.detailsContent}>
+            <View style={styles.settingsHeader}>
+              <View style={styles.headerSpacer} />
+              <ThemedText type="subtitle" style={styles.centeredTitle}>Settings</ThemedText>
+              <TouchableOpacity
+                onPress={() => setShowSettings(false)}
+                style={styles.doneButton}
+              >
+                <ThemedText style={styles.doneButtonText}>Done</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {/* Data Export Section */}
+            <ThemedText style={styles.firstSectionTitle}>Data Export</ThemedText>
+            
+            <TouchableOpacity
+              style={styles.settingsListItem}
+              onPress={exportToCSV}
+            >
+              <View style={styles.settingsItemContent}>
+                <View style={styles.settingsItemTextContainer}>
+                  <ThemedText style={styles.settingsItemTitle}>Export as CSV</ThemedText>
+                  <ThemedText style={styles.settingsItemSubtitle}>
+                    Download scan history in spreadsheet format
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.chevronText}>›</ThemedText>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingsListItem}
+              onPress={exportToJSON}
+            >
+              <View style={styles.settingsItemContent}>
+                <View style={styles.settingsItemTextContainer}>
+                  <ThemedText style={styles.settingsItemTitle}>Export as JSON</ThemedText>
+                  <ThemedText style={styles.settingsItemSubtitle}>
+                    Download full data with metadata
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.chevronText}>›</ThemedText>
+              </View>
+            </TouchableOpacity>
+
+            {/* Data Management Section */}
+            <ThemedText style={styles.settingsSectionTitle}>Data Management</ThemedText>
+            
+            <TouchableOpacity
+              style={styles.settingsListItem}
+              onPress={getStorageInfo}
+            >
+              <View style={styles.settingsItemContent}>
+                <View style={styles.settingsItemTextContainer}>
+                  <ThemedText style={styles.settingsItemTitle}>Storage Information</ThemedText>
+                  <ThemedText style={styles.settingsItemSubtitle}>
+                    View data usage and statistics
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.chevronText}>›</ThemedText>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingsListItem}
+              onPress={() => {
+                clearHistory();
+              }}
+            >
+              <View style={styles.settingsItemContent}>
+                <View style={styles.settingsItemTextContainer}>
+                  <ThemedText style={styles.settingsItemTitle}>Clear All History</ThemedText>
+                  <ThemedText style={styles.settingsItemSubtitle}>
+                    Permanently delete all scan records
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.chevronText}>›</ThemedText>
+              </View>
+            </TouchableOpacity>
+
+            {/* Privacy Section */}
+            <ThemedText style={styles.settingsSectionTitle}>Privacy</ThemedText>
+            
+            <TouchableOpacity
+              style={styles.settingsListItem}
+              onPress={() => {
+                Alert.alert(
+                  'Privacy Information',
+                  'SafeScan processes QR codes locally on your device. Scan history is stored only on your device and is not transmitted to external servers unless you explicitly export it.\n\nVirusTotal integration (when available) may send URLs to VirusTotal for security analysis. Community ratings are aggregated anonymously.',
+                  [{ text: 'OK' }]
+                );
+              }}
+            >
+              <View style={styles.settingsItemContent}>
+                <View style={styles.settingsItemTextContainer}>
+                  <ThemedText style={styles.settingsItemTitle}>Privacy Policy</ThemedText>
+                  <ThemedText style={styles.settingsItemSubtitle}>
+                    How we handle your data
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.chevronText}>›</ThemedText>
+              </View>
+            </TouchableOpacity>
+
+            {/* Logo and Version Footer */}
+            <View style={styles.logoFooter}>
+              <Image 
+                source={require('@/assets/images/Icon-Light.png')} 
+                style={styles.footerLogoImage}
+                resizeMode="contain"
+              />
+              <View style={styles.versionContainer}>
+                <ThemedText style={styles.versionText}>Version 1.0.0</ThemedText>
+              </View>
+            </View>
+          </ScrollView>
+        </ThemedView>
+      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -1014,10 +1137,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   detailsHeader: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#666',
-    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingHorizontal: 16,
   },
   quickDetailCard: {
     flexDirection: 'row',
@@ -1243,5 +1368,106 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2, // Ensure it's above the camera overlay but below other elements
+  },
+  // Settings modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  detailsContent: {
+    flex: 1,
+    paddingVertical: 16,
+  },
+  settingsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingHorizontal: 16,
+  },
+  headerSpacer: {
+    width: 60, // Same width as the Done button to balance the layout
+  },
+  centeredTitle: {
+    textAlign: 'center',
+    flex: 1,
+  },
+  doneButton: {
+    padding: 8,
+    width: 60,
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  firstSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    marginTop: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f5f5f5',
+    color: '#666666',
+  },
+  settingsSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    marginTop: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f5f5f5',
+    color: '#666666',
+  },
+  settingsListItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E5E7',
+    backgroundColor: '#ffffff',
+  },
+  settingsItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingsItemTextContainer: {
+    flex: 1,
+  },
+  settingsItemTitle: {
+    fontSize: 16,
+    fontWeight: 'normal',
+    marginBottom: 2,
+  },
+  settingsItemSubtitle: {
+    fontSize: 13,
+    opacity: 0.6,
+    lineHeight: 18,
+  },
+  chevronText: {
+    fontSize: 18,
+    opacity: 0.4,
+    fontWeight: '300',
+  },
+  logoFooter: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginTop: 20,
+  },
+  footerLogoImage: {
+    width: 60,
+    height: 60,
+    marginBottom: 16,
+  },
+  versionContainer: {
+    alignItems: 'center',
+  },
+  versionText: {
+    fontSize: 16,
+    fontWeight: 'normal',
+    color: '#666666',
   },
 });
