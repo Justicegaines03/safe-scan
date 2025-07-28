@@ -172,54 +172,14 @@ export default function CameraScannerScreen() {
   const getCommunityRating = async (url: string): Promise<CommunityRating> => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        // More realistic community ratings based on URL characteristics
-        let safeVotes = 0;
-        let unsafeVotes = 0;
-        let totalVotes = 0;
-        
-        const urlLower = url.toLowerCase();
-        
-        // Known safe domains get positive community ratings
-        const safeDomains = [
-          'google.com', 'youtube.com', 'facebook.com', 'instagram.com', 'twitter.com',
-          'linkedin.com', 'microsoft.com', 'apple.com', 'amazon.com', 'netflix.com',
-          'github.com', 'stackoverflow.com', 'wikipedia.org', 'reddit.com'
-        ];
-        
-        // Suspicious patterns get negative ratings
-        const suspiciousPatterns = [
-          'malicious', 'suspicious', 'phishing', 'scam', 'hack', 'steal',
-          'bit.ly', 'tinyurl', 'secure-login', 'verify-account'
-        ];
-        
-        if (safeDomains.some(domain => urlLower.includes(domain))) {
-          // Popular safe sites have many positive votes
-          totalVotes = Math.floor(Math.random() * 50) + 20; // 20-70 votes
-          safeVotes = Math.floor(totalVotes * (0.85 + Math.random() * 0.13)); // 85-98% safe
-          unsafeVotes = totalVotes - safeVotes;
-        } else if (suspiciousPatterns.some(pattern => urlLower.includes(pattern))) {
-          // Suspicious sites have negative ratings
-          totalVotes = Math.floor(Math.random() * 30) + 5; // 5-35 votes
-          unsafeVotes = Math.floor(totalVotes * (0.7 + Math.random() * 0.25)); // 70-95% unsafe
-          safeVotes = totalVotes - unsafeVotes;
-        } else {
-          // Unknown sites have fewer votes or no votes
-          const hasVotes = Math.random() > 0.4; // 60% chance of having some votes
-          if (hasVotes) {
-            totalVotes = Math.floor(Math.random() * 15) + 1; // 1-15 votes
-            const safeRatio = Math.random(); // Random safe/unsafe ratio
-            safeVotes = Math.floor(totalVotes * safeRatio);
-            unsafeVotes = totalVotes - safeVotes;
-          }
-        }
-        
-        const confidence = totalVotes > 0 ? safeVotes / totalVotes : 0.5;
-        
+        // For real QR scans, return no community data unless actually labeled by real humans
+        // This ensures only VirusTotal data is used for the security assessment
+        // In a real implementation, this would check a database for actual user ratings
         resolve({
-          safeVotes,
-          unsafeVotes,
-          totalVotes,
-          confidence
+          safeVotes: 0,
+          unsafeVotes: 0,
+          totalVotes: 0,
+          confidence: 0.5
         });
       }, 150);
     });
@@ -259,40 +219,47 @@ export default function CameraScannerScreen() {
         getCommunityRating(processedUrl).catch(() => null)
       ]);
 
-      // Calculate final security assessment with more nuanced logic
+      // Calculate final security assessment - VirusTotal takes priority
       let isSecure = true;
       let confidence = 0.5;
       let warning: string | undefined;
 
+      let vtConfidence = 0.5;
       if (virusTotalResult) {
+        // VirusTotal determines the base security status
         isSecure = virusTotalResult.isSecure;
         // Calculate confidence based on detection ratio
         const detectionRatio = virusTotalResult.positives / virusTotalResult.total;
         if (virusTotalResult.isSecure) {
-          confidence = Math.max(0.7, 0.95 - (detectionRatio * 2)); // High confidence for clean scans
+          vtConfidence = Math.max(0.7, 0.95 - (detectionRatio * 2)); // High confidence for clean scans
         } else {
-          confidence = Math.min(0.3, detectionRatio); // Low confidence for detected threats
+          vtConfidence = Math.min(0.3, detectionRatio); // Low confidence for detected threats
         }
+          confidence = vtConfidence;
       }
 
+      // Only modify VirusTotal result if there's significant community data
       if (communityResult && communityResult.totalVotes >= 3) {
         const communityConfidence = communityResult.confidence;
         if (!virusTotalResult) {
           // Use community rating if VirusTotal unavailable
-          isSecure = communityConfidence > 0.6;
           confidence = communityConfidence;
+          isSecure = confidence > 0.90;
+          
+
         } else {
-          // Combine both scores, giving VirusTotal higher weight but considering community input
+          // Only combine when there's actual community input (≥3 votes)
           const vtWeight = 0.75;
           const communityWeight = 0.25;
           confidence = (confidence * vtWeight) + (communityConfidence * communityWeight);
+          isSecure = confidence > 0.90
           
           // If community strongly disagrees with VirusTotal, add warning
           if (Math.abs(confidence - communityConfidence) > 0.4) {
             warning = 'Community opinion differs from security scan - use caution';
           }
         }
-      }
+  }
 
       // Add warnings based on confidence levels
       if (confidence < 0.3) {
@@ -709,8 +676,6 @@ export default function CameraScannerScreen() {
   }
 
   if (validationResult) {
-    const isQuickSafe = validationResult.isSecure && validationResult.confidence > 0.8;
-    
     return (
       <GestureHandlerRootView style={styles.container}>
         <ThemedView style={styles.container}>
@@ -752,8 +717,7 @@ export default function CameraScannerScreen() {
               {/* Results overlay */}
               <View style={styles.resultsOverlay}>
                 <ThemedView style={styles.overlayContent}>
-                  {/* App Rating */}
-                  {isQuickSafe ? (
+                  {/* Always show detailed view with consistent layout */}
                   <>
                   {validationResult.virusTotal && (
                     <ThemedView style={[
@@ -769,7 +733,7 @@ export default function CameraScannerScreen() {
                     styles.detailTitle,
                     { color: '#FFFFFF' }
                     ]}>
-                    {validationResult.virusTotal.positives === 0 ? ' Clean' : ` Threat`}
+                    {validationResult.virusTotal.positives === 0 ? ' Clean' : ' Threat'}
                     </ThemedText>
                     </ThemedView>
                     )}
@@ -794,14 +758,6 @@ export default function CameraScannerScreen() {
                   </ThemedText>
                   </ThemedView>
                   </>
-                  ) : (
-                  <ThemedView style={styles.warningBox}>
-                  <ThemedText style={styles.warningTitle}>⚠️ SECURITY WARNING</ThemedText>
-                  <ThemedText style={styles.warningSubtext}>
-                    This QR code may be unsafe. Tap to continue scanning.
-                  </ThemedText>
-                  </ThemedView>
-                  )}
                 </ThemedView>
               </View>
 
