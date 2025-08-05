@@ -1138,7 +1138,7 @@ export default function ScanHistoryScreen() {
             Unsafe {history.filter(h => h.safetyStatus === 'unsafe').length}
           </ThemedText>
           <ThemedText style={[styles.quickStat, { color: '#FFC107' }]}>
-            Warning {history.filter(h => h.safetyStatus === 'unknown').length}
+            Unknown {history.filter(h => h.safetyStatus === 'unknown').length}
           </ThemedText>
         </View>
       </ThemedView>

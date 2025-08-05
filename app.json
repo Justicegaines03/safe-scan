@@ -42,6 +42,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "VIRUSTOTAL_API_KEY": "${VIRUS_TOTAL_API_KEY}"
     }
   }
 }
