@@ -87,10 +87,8 @@ export default function ScanHistoryScreen() {
       const data = await AsyncStorage.getItem(STORAGE_KEY);
       let existingHistory: ScanHistoryEntry[] = data ? JSON.parse(data) : [];
       
-      // Generate mock data
-      const mockData = generateMockHistory();
-      
       // Separate real scans from mock data
+      const existingMockData = existingHistory.filter(entry => entry.isMockData);
       const realScans = existingHistory.filter(entry => !entry.isMockData);
       
       // Combine real scans (newest first) with mock data
@@ -101,8 +99,6 @@ export default function ScanHistoryScreen() {
       
       setHistory(combinedHistory);
       
-      // Save the combined history
-      await saveHistory(combinedHistory);
       
     } catch (error) {
       console.error('Error loading history:', error);
@@ -1088,7 +1084,7 @@ export default function ScanHistoryScreen() {
           />
           <View style={styles.quickFilters}>
             {[
-              // { key: 'all', label: 'All', symbol: 'list.bullet' as const },
+              { key: 'all', label: 'All', symbol: 'list.bullet' as const },
               { key: 'safe', label: 'Safe', symbol: 'checkmark.shield.fill' as const },
               { key: 'unsafe', label: 'Unsafe', symbol: 'xmark.shield.fill' as const },
               { key: 'unknown', label: 'Unknown', symbol: 'questionmark.circle.fill' as const }
@@ -1106,19 +1102,17 @@ export default function ScanHistoryScreen() {
                 onPress={() => setSelectedFilter(filter.key as any)}
               >
                 <View style={styles.filterButtonContent}>
-                  {filter.key === 'all' && (
-                    <SymbolView
-                      name={filter.symbol}
-                      size={16}
-                      type="hierarchical"
-                      tintColor={selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key)}
-                      fallback={
-                      <ThemedText style={{ color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }}>
-                          All
-                        </ThemedText>
-                      }
-                    />
-                  )}
+                  <SymbolView
+                    name={filter.symbol}
+                    size={16}
+                    type="hierarchical"
+                    tintColor={selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key)}
+                    fallback={
+                    <ThemedText style={{ color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }}>
+                        {filter.label}
+                      </ThemedText>
+                    }
+                  />
                   <ThemedText style={[
                     styles.quickFilterText,
                     { color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }
