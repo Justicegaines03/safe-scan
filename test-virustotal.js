@@ -1,5 +1,3 @@
-const Constants = require('expo-constants').default;
-
 // Test VirusTotal API integration
 const testVirusTotalAPI = async () => {
   try {
@@ -12,6 +10,7 @@ const testVirusTotalAPI = async () => {
     console.log('Test URL:', testUrl);
 
     // Create FormData for URL submission
+    const { FormData } = await import('formdata-polyfill/esm');
     const formData = new FormData();
     formData.append('url', testUrl);
 
@@ -27,11 +26,18 @@ const testVirusTotalAPI = async () => {
     });
 
     if (!submitResponse.ok) {
-      throw new Error(`VirusTotal submission failed: ${submitResponse.status}`);
+      console.warn(`VirusTotal submission failed: ${submitResponse.status}`);
+      return null;
     }
 
     const submitData = await submitResponse.json();
     console.log('Submission response:', submitData);
+
+    // Check for API errors in response
+    if (submitData.response_code === 0) {
+      console.warn('VirusTotal API error: Invalid request');
+      return null;
+    }
 
     console.log('\n2. Waiting 2 seconds for scan to process...');
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -47,11 +53,30 @@ const testVirusTotalAPI = async () => {
     );
 
     if (!reportResponse.ok) {
-      throw new Error(`VirusTotal report failed: ${reportResponse.status}`);
+      console.warn(`VirusTotal report failed: ${reportResponse.status}`);
+      return null;
     }
 
     const reportData = await reportResponse.json();
     console.log('Report data:', reportData);
+
+    // Handle case where scan is still in progress
+    if (reportData.response_code === -2) {
+      console.log('✅ Scan in progress - returning pending status');
+      return {
+        isSecure: false, // Conservative approach
+        positives: -1, // Use -1 to indicate unknown/pending
+        total: 0,
+        scanId: submitData.scan_id || `pending-${Date.now()}`,
+        permalink: submitData.permalink || `https://www.virustotal.com/gui/url/${btoa(testUrl)}/detection`
+      };
+    }
+
+    // Handle case where URL was not found in VirusTotal database
+    if (reportData.response_code === 0) {
+      console.warn('URL not found in VirusTotal database');
+      return null;
+    }
 
     // Parse the result
     const positives = reportData.positives || 0;
@@ -63,14 +88,16 @@ const testVirusTotalAPI = async () => {
       positives,
       total,
       scanId: reportData.scan_id || submitData.scan_id || 'test',
-      permalink: reportData.permalink || submitData.permalink || 'https://virustotal.com'
+      permalink: reportData.permalink || submitData.permalink || `https://www.virustotal.com/gui/url/${btoa(testUrl)}/detection`
     };
 
     console.log('\n✅ Final result:');
     console.log(JSON.stringify(result, null, 2));
+    return result;
 
   } catch (error) {
     console.error('❌ VirusTotal API test failed:', error);
+    return null;
   }
 };
 
