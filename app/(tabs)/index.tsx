@@ -113,7 +113,10 @@ export default function CameraScannerScreen() {
       const apiKey = Constants.expoConfig?.extra?.VIRUSTOTAL_API_KEY;
 
       // Check if API key is available
-      if (!apiKey || apiKey === "${VIRUS_TOTAL_API_KEY}") {
+      if (!!apiKey) {
+        console.log('VirusTotal API key configured')
+      }
+      else {
         console.warn('VirusTotal API key not configured');
         return null;
       }
@@ -168,6 +171,15 @@ export default function CameraScannerScreen() {
         
         // Submit URL for scanning using v3 API
         console.log('Submitting URL to VirusTotal:', url);
+        
+        // Additional URL validation before submission
+        try {
+          new URL(url); // Just validate, don't log
+        } catch (urlError) {
+          console.error('URL validation failed before submission:', url, urlError);
+          return null;
+        }
+        
         const submitResponse = await fetch('https://www.virustotal.com/api/v3/urls', {
           method: 'POST',
           headers: {
@@ -177,25 +189,30 @@ export default function CameraScannerScreen() {
           body: `url=${encodeURIComponent(url)}`,
         });
 
-        console.log('Submit response status:', submitResponse.status, submitResponse.statusText);
-
         if (!submitResponse.ok) {
-          console.error('VirusTotal submission failed:', {
-            status: submitResponse.status,
-            statusText: submitResponse.statusText,
-            url: url
-          });
-          
-          // Try to get more error details
+          let errorDetails = null;
           try {
             const errorText = await submitResponse.text();
-            console.error('Error response body:', errorText);
+            errorDetails = JSON.parse(errorText);
+            console.error('VirusTotal submission failed:', {
+              status: submitResponse.status,
+              errorBody: errorText,
+              errorDetails: errorDetails
+            });
           } catch (e) {
-            console.error('Could not read error response body');
+            console.error('VirusTotal submission failed:', {
+              status: submitResponse.status,
+              errorBody: 'Could not read error response body'
+            });
           }
           
           if (submitResponse.status === 400) {
-            console.warn('VirusTotal API: Bad request. Check URL format and encoding.');
+            if (errorDetails?.error?.code === 'InvalidArgumentError') {
+              console.warn('VirusTotal API: Unable to canonicalize URL. The URL format is invalid or unsupported.');
+              console.warn('Problem URL:', url);
+            } else {
+              console.warn('VirusTotal API: Bad request. Check URL format and encoding.');
+            }
           } else if (submitResponse.status === 403) {
             console.warn('VirusTotal API: Access forbidden. Check API key permissions or rate limits.');
           } else if (submitResponse.status === 429) {
@@ -252,9 +269,7 @@ export default function CameraScannerScreen() {
         
         const positives = malicious + suspicious;
         const total = malicious + suspicious + clean + undetected + harmless + timeout;
-        const isSecure = positives === 0 || (total > 0 && (positives / total) < 0.1); // Consider secure if less than 10% detection rate
-
-        console.log('VirusTotal stats:', { malicious, suspicious, clean, undetected, harmless, timeout, positives, total, isSecure });
+        const isSecure = positives / total < 0.01; // Consider secure if less than 1% detection rate
 
         return {
           isSecure,
@@ -307,36 +322,94 @@ export default function CameraScannerScreen() {
 
       // Process URL to ensure it has a valid format
       let processedUrl = url.trim();
-      if (!processedUrl.startsWith('http://') && !processedUrl.startsWith('https://')) {
+      
+      // Remove any surrounding whitespace and invalid characters
+      processedUrl = processedUrl.replace(/[\s\n\r\t]/g, '');
+      
+      // Handle common URL formats and fix them
+      // Check if URL already has a protocol (including non-HTTP protocols)
+      const hasProtocol = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(processedUrl);
+      
+      if (!hasProtocol) {
         processedUrl = 'https://' + processedUrl;
+      } else if (!processedUrl.match(/^https?:\/\//i)) {
+        // If it has a protocol but it's not HTTP/HTTPS, it's not suitable for VirusTotal
+        console.warn('Non-HTTP protocol detected:', processedUrl);
+        return {
+          url: processedUrl,
+          isSecure: false,
+          confidence: 0,
+          warning: 'Unsupported URL protocol - only HTTP/HTTPS URLs can be validated'
+        };
+      }
+      
+      // Additional URL validation and sanitization for VirusTotal
+      try {
+        // Test if the URL can be parsed by the URL constructor
+        const urlObj = new URL(processedUrl);
+        
+        // Double-check protocol after URL construction
+        if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+          console.error('Unsupported protocol after URL parsing:', urlObj.protocol);
+          return {
+            url: processedUrl,
+            isSecure: false,
+            confidence: 0,
+            warning: 'Unsupported URL protocol - only HTTP/HTTPS URLs can be validated'
+          };
+        }
+        
+        // Rebuild the URL to ensure it's properly formatted
+        processedUrl = urlObj.toString();
+        
+        
+      } catch (urlError) {
+        console.error('Invalid URL format:', url, urlError);
+        return {
+          url: processedUrl,
+          isSecure: false,
+          confidence: 0,
+          warning: 'Invalid URL format - unable to validate'
+        };
       }
 
       // Always attempt VirusTotal validation first
       let virusTotalResult: VirusTotalResult | null = null;
       let communityResult: CommunityRating | null = null;
 
-      try {
-        virusTotalResult = await validateWithVirusTotal(processedUrl);
-        if (virusTotalResult) {
-          console.log('VirusTotal scan successful:', virusTotalResult);
-        } else {
-          console.log('VirusTotal scan returned no results - treating as unknown');
-        }
-      } catch (error) {
-        console.warn('VirusTotal validation failed:', error);
-        virusTotalResult = null;
-      }
+      // Call VirusTotal API
+      virusTotalResult = await validateWithVirusTotal(processedUrl);
 
+      // Call community rating API
       try {
         communityResult = await getCommunityRating(processedUrl);
       } catch (error) {
-        console.log('Community rating returned no results:', error);
+        console.log('Community rating not available:', error);
+        communityResult = null;
       }
 
       // Calculate final security assessment
       let isSecure = false; // Default to conservative (unsafe) until proven otherwise
       let confidence = 0.5;
       let warning: string | undefined;
+
+      // Log the security assessment calculation
+      console.log('Security Assessment Calculation:');
+      console.log('- VirusTotal available:', !!virusTotalResult);
+      console.log('- Community data available:', !!communityResult);
+
+      if (virusTotalResult) {
+        console.log('- VirusTotal positives:', virusTotalResult.positives);
+        console.log('- VirusTotal total:', virusTotalResult.total);
+        console.log('- VirusTotal secure:', virusTotalResult.isSecure);
+      }
+
+      if (communityResult) {
+        console.log('- Community safe votes:', communityResult.safeVotes);
+        console.log('- Community unsafe votes:', communityResult.unsafeVotes);
+        console.log('- Community total votes:', communityResult.totalVotes);
+        console.log('- Community confidence:', communityResult.confidence);
+      }
 
       // Handle different data availability scenarios
       if (!virusTotalResult && !communityResult) {
@@ -872,9 +945,9 @@ export default function CameraScannerScreen() {
                     { 
                       backgroundColor: !validationResult.virusTotal 
                         ? '#FFA726' // Orange for unknown/unavailable
-                        : validationResult.virusTotal.positives === -1 
+                        : validationResult.isSecure === null
                         ? '#FFA726' // Orange for pending scans
-                        : (validationResult.virusTotal.positives === 0 ? '#2E7D32' : '#C62828'), // Green for clean, red for threat
+                        : (validationResult.isSecure === true ? '#2E7D32' : '#C62828'), // Green for clean, red for threat
                         padding: 6, 
                         borderRadius: 20, 
                         marginBottom: 8
