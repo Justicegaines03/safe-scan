@@ -32,24 +32,6 @@ import { SymbolView } from 'expo-symbols';
 import Constants from 'expo-constants';
 import { backendInfrastructure } from '@/services';
 
-// Utility to hash URL for backend community rating
-const hashUrl = async (url: string): Promise<string> => {
-  let hash = 0;
-  for (let i = 0; i < url.length; i++) {
-    const char = url.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return 'url_' + Math.abs(hash).toString(16);
-};
-
-// Types
-interface QRScanResult {
-  data: string;
-  type: string;
-  timestamp: number;
-}
-
 interface VirusTotalResult {
   isSecure: boolean;
   positives: number;
@@ -65,23 +47,17 @@ interface CommunityRating {
   confidence: number;
 }
 
-interface ValidationResult {
-  url: string;
-  isSecure: boolean;
-  virusTotal?: VirusTotalResult;
-  community?: CommunityRating;
+interface SecurityAssessment {
+  issecure: boolean;
+  securityAssessment: string
   confidence: number;
-  warning?: string;
 }
 
-/**
- * QR Code Scanner with Security Validation
- * 
- * Icon Size Configuration:
- * - To change icon sizes, modify the 'iconSize' and 'largeIconSize' values in the styles
- * - iconSize.fontSize controls small icons (shield, person)
- * - largeIconSize.fontSize controls action button icons
- */
+interface ResultsOverlay {
+  issecure: boolean;
+  securityAssessment: string
+  confidence: number
+}
 
 const { width, height } = Dimensions.get('window');
 
@@ -90,11 +66,9 @@ export default function CameraScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraType, setCameraType] = useState<CameraType>('back');
   const [isScanning, setIsScanning] = useState(true);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [validationResult, setValidationResult] = useState<ResultsOverlay | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [lastScanTime, setLastScanTime] = useState(0);
-  const [showManualInput, setShowManualInput] = useState(false);
-  const [manualUrl, setManualUrl] = useState('');
   const [scanCount, setScanCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
@@ -107,9 +81,30 @@ export default function CameraScannerScreen() {
     }
   }, [permission, requestPermission]);
 
-  // VirusTotal API
+  // First, determine if the URL is http or https
+  const validateHTTP = (url: string): string | null => {
+
+    // Trim URL
+    let trimmedUrl = url.trim();
+    
+    // Remove any surrounding whitespace and invalid characters
+    trimmedUrl = trimmedUrl.replace(/[\s\n\r\t]/g, '');
+    
+    if (trimmedUrl.match(/^https:\/\//)) {
+      console.log('HTTPS URL detected:', trimmedUrl);
+      return trimmedUrl;
+    } else if (trimmedUrl.match(/^http:\/\//)) {
+      console.log('HTTP URL detected:', trimmedUrl);
+      return trimmedUrl;
+    } else {
+      // If it's not HTTP/HTTPS, it's not suitable for VirusTotal
+      console.warn('Non-HTTP/HTTPS protocol detected:', trimmedUrl);
+      return null;
+    }
+  };
+
+  // Second, validate the URL with the VirusTotal API
   const validateWithVirusTotal = async (url: string): Promise<VirusTotalResult | null> => {
-    try {
       const apiKey = Constants.expoConfig?.extra?.VIRUSTOTAL_API_KEY;
 
       // Check if API key is available
@@ -117,43 +112,13 @@ export default function CameraScannerScreen() {
         console.log('VirusTotal API key configured')
       }
       else {
-        console.warn('VirusTotal API key not configured');
+        console.error('VirusTotal API key not configured');
         return null;
       }
 
-      // Use VirusTotal API v3 with proper URL encoding
-      // React Native compatible base64 encoding
-      let urlId: string;
-      try {
-        // Try using btoa if available (works on web)
-        urlId = btoa(url).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-      } catch (error) {
-        // Fallback for React Native - use a simple base64 implementation
-        const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-        let result = '';
-        let i = 0;
-        
-        const bytes = new TextEncoder().encode(url);
-        
-        while (i < bytes.length) {
-          const a = bytes[i++];
-          const b = i < bytes.length ? bytes[i++] : 0;
-          const c = i < bytes.length ? bytes[i++] : 0;
-          
-          const bitmap = (a << 16) | (b << 8) | c;
-          
-          result += base64Chars.charAt((bitmap >> 18) & 63);
-          result += base64Chars.charAt((bitmap >> 12) & 63);
-          result += i - 2 < bytes.length ? base64Chars.charAt((bitmap >> 6) & 63) : '=';
-          result += i - 1 < bytes.length ? base64Chars.charAt(bitmap & 63) : '=';
-        }
-        
-        urlId = result.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-      }
-      
-      console.log('VirusTotal URL ID:', urlId, 'for URL:', url);
-      
-      // First, try to get existing analysis
+      // Use VirusTotal API v3 with proper URL encoding 
+      console.log('-VirusTotal URL ID:', urlId, 'for URL:', url);
+    
       let reportResponse = await fetch(
         `https://www.virustotal.com/api/v3/urls/${urlId}`,
         {
@@ -165,84 +130,7 @@ export default function CameraScannerScreen() {
         }
       );
 
-      // If URL not found (404), submit for analysis first
-      if (reportResponse.status === 404) {
-        console.log('URL not found in VirusTotal database, submitting for analysis...');
-        
-        // Submit URL for scanning using v3 API
-        console.log('Submitting URL to VirusTotal:', url);
-        
-        // Additional URL validation before submission
-        try {
-          new URL(url); // Just validate, don't log
-        } catch (urlError) {
-          console.error('URL validation failed before submission:', url, urlError);
-          return null;
-        }
-        
-        const submitResponse = await fetch('https://www.virustotal.com/api/v3/urls', {
-          method: 'POST',
-          headers: {
-            'x-apikey': apiKey,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: `url=${encodeURIComponent(url)}`,
-        });
-
-        if (!submitResponse.ok) {
-          let errorDetails = null;
-          try {
-            const errorText = await submitResponse.text();
-            errorDetails = JSON.parse(errorText);
-            console.error('VirusTotal submission failed:', {
-              status: submitResponse.status,
-              errorBody: errorText,
-              errorDetails: errorDetails
-            });
-          } catch (e) {
-            console.error('VirusTotal submission failed:', {
-              status: submitResponse.status,
-              errorBody: 'Could not read error response body'
-            });
-          }
-          
-          if (submitResponse.status === 400) {
-            if (errorDetails?.error?.code === 'InvalidArgumentError') {
-              console.warn('VirusTotal API: Unable to canonicalize URL. The URL format is invalid or unsupported.');
-              console.warn('Problem URL:', url);
-            } else {
-              console.warn('VirusTotal API: Bad request. Check URL format and encoding.');
-            }
-          } else if (submitResponse.status === 403) {
-            console.warn('VirusTotal API: Access forbidden. Check API key permissions or rate limits.');
-          } else if (submitResponse.status === 429) {
-            console.warn('VirusTotal API: Rate limit exceeded. Please wait before trying again.');
-          } else {
-            console.warn(`VirusTotal submission failed: ${submitResponse.status}`);
-          }
-          return null;
-        }
-
-        // Wait for scan to process
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Try to get the report again
-        reportResponse = await fetch(
-          `https://www.virustotal.com/api/v3/urls/${urlId}`,
-          {
-            method: 'GET',
-            headers: {
-              'x-apikey': apiKey,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        if (!reportResponse.ok) {
-          console.warn(`VirusTotal report failed after submission: ${reportResponse.status}`);
-          return null;
-        }
-      } else if (!reportResponse.ok) {
+      if (!reportResponse.ok) {
         if (reportResponse.status === 403) {
           console.warn('VirusTotal API: Access forbidden. Check API key permissions.');
         } else if (reportResponse.status === 429) {
@@ -254,52 +142,20 @@ export default function CameraScannerScreen() {
       }
 
       const reportData = await reportResponse.json();
-
-      // Parse v3 API response format
-      if (reportData.data && reportData.data.attributes) {
-        const stats = reportData.data.attributes.last_analysis_stats;
-        
-        // Safely handle potentially undefined stats values
-        const malicious = stats.malicious || 0;
-        const suspicious = stats.suspicious || 0;
-        const clean = stats.clean || 0;
-        const undetected = stats.undetected || 0;
-        const harmless = stats.harmless || 0;
-        const timeout = stats.timeout || 0;
-        
-        const positives = malicious + suspicious;
-        const total = malicious + suspicious + clean + undetected + harmless + timeout;
-        const isSecure = positives / total < 0.01; // Consider secure if less than 1% detection rate
-
-        return {
-          isSecure,
-          positives,
-          total,
-          scanId: reportData.data.id || `report-${Date.now()}`,
-          permalink: `https://www.virustotal.com/gui/url/${reportData.data.id}/detection`
-        };
-      }
-
-      // If we can't parse the response properly, return null
-      console.warn('Unable to parse VirusTotal response');
-      return null;
-
-    } catch (error) {
-      // Gracefully handle VirusTotal API errors
-      console.warn('VirusTotal validation failed:', error);
-      return null;
-    }
+      return reportData   
   };
 
-  // Community Rating
+  // Third, gather the Community Rating
   const getCommunityRating = async (url: string): Promise<CommunityRating> => {
     if (!backendInfrastructure) {
-      throw new Error('Backend infrastructure not initialized');
+      console.error('Backend infrastructure not initialized');
     }
+
     const qrHash = await hashUrl(url);
     const rating = await backendInfrastructure.getCommunityRating(qrHash);
+
     if (!rating) {
-      throw new Error('No community rating found for this URL.');
+      console.log('No community rating found for this URL.');
     }
     return {
       safeVotes: rating.safeVotes,
@@ -309,254 +165,130 @@ export default function CameraScannerScreen() {
     };
   };
 
-  // Generate unique user ID for voting
-  const generateUserId = async (): Promise<string> => {
-    const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    await AsyncStorage.setItem('userId', userId);
-    return userId;
-  };
+  // Fourth, call the VirusTotal and Community Ratings 
+  // to make a Security Assessment
+  const securityAssessment = async (processedUrl: string): Promise<SecurityAssessment> => {
+    let virusTotalResult: VirusTotalResult | null = null;
+    let communityResult: CommunityRating | null = null;
 
-  const validateUrl = async (url: string): Promise<ValidationResult> => {
-    try {
-      setIsValidating(true);
+    // Call VirusTotal API
+    virusTotalResult = await validateWithVirusTotal(processedUrl);
 
-      // Process URL to ensure it has a valid format
-      let processedUrl = url.trim();
-      
-      // Remove any surrounding whitespace and invalid characters
-      processedUrl = processedUrl.replace(/[\s\n\r\t]/g, '');
-      
-      // Handle common URL formats and fix them
-      // Check if URL already has a protocol (including non-HTTP protocols)
-      const hasProtocol = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(processedUrl);
-      
-      if (!hasProtocol) {
-        processedUrl = 'https://' + processedUrl;
-      } else if (!processedUrl.match(/^https?:\/\//i)) {
-        // If it has a protocol but it's not HTTP/HTTPS, it's not suitable for VirusTotal
-        console.warn('Non-HTTP protocol detected:', processedUrl);
-        return {
-          url: processedUrl,
-          isSecure: false,
-          confidence: 0,
-          warning: 'Unsupported URL protocol - only HTTP/HTTPS URLs can be validated'
-        };
-      }
-      
-      // Additional URL validation and sanitization for VirusTotal
-      try {
-        // Test if the URL can be parsed by the URL constructor
-        const urlObj = new URL(processedUrl);
-        
-        // Double-check protocol after URL construction
-        if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
-          console.error('Unsupported protocol after URL parsing:', urlObj.protocol);
-          return {
-            url: processedUrl,
-            isSecure: false,
-            confidence: 0,
-            warning: 'Unsupported URL protocol - only HTTP/HTTPS URLs can be validated'
-          };
-        }
-        
-        // Rebuild the URL to ensure it's properly formatted
-        processedUrl = urlObj.toString();
-        
-        
-      } catch (urlError) {
-        console.error('Invalid URL format:', url, urlError);
-        return {
-          url: processedUrl,
-          isSecure: false,
-          confidence: 0,
-          warning: 'Invalid URL format - unable to validate'
-        };
-      }
+    // Call community rating API
+    communityResult = await getCommunityRating(processedUrl);
 
-      // Always attempt VirusTotal validation first
-      let virusTotalResult: VirusTotalResult | null = null;
-      let communityResult: CommunityRating | null = null;
+    // Calculate final security assessment
+    let isSecure = false; // Default to conservative (unsafe) until proven otherwise
+    let confidence = 0.5;
+    let warning: string | undefined;
 
-      // Call VirusTotal API
-      virusTotalResult = await validateWithVirusTotal(processedUrl);
+    // Log the security assessment calculation
+    console.log('Security Assessment Calculation:');
+    console.log('- VirusTotal available:', !!virusTotalResult);
+    console.log('- Community data available:', !!communityResult);
 
-      // Call community rating API
-      try {
-        communityResult = await getCommunityRating(processedUrl);
-      } catch (error) {
-        console.log('Community rating not available:', error);
-        communityResult = null;
-      }
+    if (virusTotalResult) {
+      console.log('- VirusTotal positives:', virusTotalResult.positives);
+      console.log('- VirusTotal total:', virusTotalResult.total);
+      console.log('- VirusTotal secure:', virusTotalResult.isSecure);
+    }
 
-      // Calculate final security assessment
-      let isSecure = false; // Default to conservative (unsafe) until proven otherwise
-      let confidence = 0.5;
-      let warning: string | undefined;
+    if (communityResult) {
+      console.log('- Community safe votes:', communityResult.safeVotes);
+      console.log('- Community unsafe votes:', communityResult.unsafeVotes);
+      console.log('- Community total votes:', communityResult.totalVotes);
+      console.log('- Community confidence:', communityResult.confidence);
+    }
 
-      // Log the security assessment calculation
-      console.log('Security Assessment Calculation:');
-      console.log('- VirusTotal available:', !!virusTotalResult);
-      console.log('- Community data available:', !!communityResult);
-
-      if (virusTotalResult) {
-        console.log('- VirusTotal positives:', virusTotalResult.positives);
-        console.log('- VirusTotal total:', virusTotalResult.total);
-        console.log('- VirusTotal secure:', virusTotalResult.isSecure);
-      }
-
-      if (communityResult) {
-        console.log('- Community safe votes:', communityResult.safeVotes);
-        console.log('- Community unsafe votes:', communityResult.unsafeVotes);
-        console.log('- Community total votes:', communityResult.totalVotes);
-        console.log('- Community confidence:', communityResult.confidence);
-      }
-
-      // Handle different data availability scenarios
-      if (!virusTotalResult && !communityResult) {
-        // No data from either source
-        warning = 'No security data available from VirusTotal or community - status unknown';
+    // Handle different data availability scenarios
+    if (!virusTotalResult && !communityResult) {
+      // No data from either source
+      warning = 'No security data available from VirusTotal or community - status unknown';
+      confidence = 0;
+      isSecure = false;
+    } else if (!virusTotalResult && communityResult) {
+      // Only community data available
+      warning = 'VirusTotal scan unavailable - relying on community data only';
+      confidence = communityResult.confidence * 0.6; // Reduced confidence without VirusTotal
+      isSecure = confidence > 0.7;
+    } else if (virusTotalResult && !communityResult) {
+      // Only VirusTotal data available
+      if (virusTotalResult.positives === -1) {
+        // VirusTotal scan is pending/unknown
+        warning = 'VirusTotal scan in progress - status unknown';
         confidence = 0;
         isSecure = false;
-      } else if (!virusTotalResult && communityResult) {
-        // Only community data available
-        warning = 'VirusTotal scan unavailable - relying on community data only';
-        confidence = communityResult.confidence * 0.6; // Reduced confidence without VirusTotal
+      } else {
+        // VirusTotal scan completed successfully
+        warning = 'No community votes available';
+        isSecure = virusTotalResult.isSecure;
+        // Calculate confidence based on detection ratio
+        const detectionRatio = virusTotalResult.total > 0 ? virusTotalResult.positives / virusTotalResult.total : 0;
+        if (virusTotalResult.isSecure) {
+          confidence = Math.max(0.7, 0.95 - (detectionRatio * 2)); // High confidence for clean scans
+        } else {
+          confidence = Math.min(0.3, detectionRatio); // Low confidence for detected threats
+        }
+      }
+    } else if (virusTotalResult && communityResult) {
+      // Both data sources available
+      if (virusTotalResult.positives === -1) {
+        // VirusTotal scan is pending, rely more on community
+        warning = 'VirusTotal scan in progress - relying on community data';
+        confidence = communityResult.confidence * 0.8;
         isSecure = confidence > 0.7;
-      } else if (virusTotalResult && !communityResult) {
-        // Only VirusTotal data available
-        if (virusTotalResult.positives === -1) {
-          // VirusTotal scan is pending/unknown
-          warning = 'VirusTotal scan in progress - status unknown';
-          confidence = 0;
-          isSecure = false;
+      } else {
+        // Both sources have valid data
+        let vtConfidence = 0.5;
+        isSecure = virusTotalResult.isSecure;
+        // Calculate confidence based on detection ratio
+        const detectionRatio = virusTotalResult.total > 0 ? virusTotalResult.positives / virusTotalResult.total : 0;
+        if (virusTotalResult.isSecure) {
+          vtConfidence = Math.max(0.7, 0.95 - (detectionRatio * 2)); // High confidence for clean scans
         } else {
-          // VirusTotal scan completed successfully
-          warning = 'No community votes available';
-          isSecure = virusTotalResult.isSecure;
-          // Calculate confidence based on detection ratio
-          const detectionRatio = virusTotalResult.total > 0 ? virusTotalResult.positives / virusTotalResult.total : 0;
-          if (virusTotalResult.isSecure) {
-            confidence = Math.max(0.7, 0.95 - (detectionRatio * 2)); // High confidence for clean scans
-          } else {
-            confidence = Math.min(0.3, detectionRatio); // Low confidence for detected threats
-          }
+          vtConfidence = Math.min(0.3, detectionRatio); // Low confidence for detected threats
         }
-      } else if (virusTotalResult && communityResult) {
-        // Both data sources available
-        if (virusTotalResult.positives === -1) {
-          // VirusTotal scan is pending, rely more on community
-          warning = 'VirusTotal scan in progress - relying on community data';
-          confidence = communityResult.confidence * 0.8;
-          isSecure = confidence > 0.7;
-        } else {
-          // Both sources have valid data
-          let vtConfidence = 0.5;
-          isSecure = virusTotalResult.isSecure;
-          // Calculate confidence based on detection ratio
-          const detectionRatio = virusTotalResult.total > 0 ? virusTotalResult.positives / virusTotalResult.total : 0;
-          if (virusTotalResult.isSecure) {
-            vtConfidence = Math.max(0.7, 0.95 - (detectionRatio * 2)); // High confidence for clean scans
-          } else {
-            vtConfidence = Math.min(0.3, detectionRatio); // Low confidence for detected threats
-          }
-          confidence = vtConfidence;
+        confidence = vtConfidence;
 
-          // Only modify VirusTotal result if there's significant community data
-          if (communityResult.totalVotes >= 3) {
-            const communityConfidence = communityResult.confidence;
-            // Combine when there's actual community input (≥3 votes)
-            const vtWeight = 0.75;
-            const communityWeight = 0.25;
-            confidence = (confidence * vtWeight) + (communityConfidence * communityWeight);
-            isSecure = confidence > 0.85;
-            // If community strongly disagrees with VirusTotal, add warning
-            if (Math.abs(confidence - communityConfidence) > 0.4) {
-              warning = 'Community opinion differs from VirusTotal scan - use caution';
-            }
+        // Only modify VirusTotal result if there's significant community data
+        if (communityResult.totalVotes >= 3) {
+          const communityConfidence = communityResult.confidence;
+          // Combine when there's actual community input (≥3 votes)
+          const vtWeight = 0.75;
+          const communityWeight = 0.25;
+          confidence = (confidence * vtWeight) + (communityConfidence * communityWeight);
+          isSecure = confidence > 0.85;
+          // If community strongly disagrees with VirusTotal, add warning
+          if (Math.abs(confidence - communityConfidence) > 0.4) {
+            warning = 'Community opinion differs from VirusTotal scan - use caution';
           }
         }
       }
-
-      // Add warnings based on confidence levels
-      if (confidence < 0.3) {
-        warning = 'High risk detected - strongly recommend avoiding this link';
-      } else if (confidence < 0.6) {
-        warning = warning || 'Moderate risk detected - proceed with caution';
-      } else if (confidence < 0.8 && !warning) {
-        warning = 'Some uncertainty in security assessment';
-      }
-
-      return {
-        url: processedUrl,
-        isSecure,
-        virusTotal: virusTotalResult || undefined,
-        community: communityResult || undefined,
-        confidence,
-        warning
-      };
-
-    } catch (error) {
-      console.error('URL validation error:', error);
-      return {
-        url,
-        isSecure: false,
-        confidence: 0,
-        warning: 'Invalid URL format or validation error'
-      };
-    } finally {
-      setIsValidating(false);
     }
+
+    // Add warnings based on confidence levels
+    if (confidence < 0.3) {
+      warning = 'High risk detected - strongly recommend avoiding this link';
+    } else if (confidence < 0.6) {
+      warning = warning || 'Moderate risk detected - proceed with caution';
+    } else if (confidence < 0.8 && !warning) {
+      warning = 'Some uncertainty in security assessment';
+    }
+
+    return {
+      url: processedUrl,
+      isSecure,
+      virusTotal: virusTotalResult || undefined,
+      community: communityResult || undefined,
+      confidence,
+      warning
+    };
   };
 
-  const saveToHistory = async (scanData: string, validationResult: ValidationResult, scanStartTime: number) => {
-    try {
-      const STORAGE_KEY = '@safe_scan_history';
-      const existingHistory = await AsyncStorage.getItem(STORAGE_KEY);
-      const history = existingHistory ? JSON.parse(existingHistory) : [];
-      
-      const scanEndTime = Date.now();
-      const scanDuration = scanEndTime - scanStartTime;
-      
-      const newEntry = {
-        id: `scan_${scanEndTime}`,
-        qrData: scanData,
-        url: validationResult.url,
-        timestamp: scanEndTime,
-        safetyStatus: !validationResult.virusTotal || validationResult.virusTotal.positives === -1 
-          ? 'unknown' 
-          : (validationResult.isSecure ? 'safe' : 'unsafe'),
-        virusTotalResult: validationResult.virusTotal ? {
-          isSecure: validationResult.virusTotal.isSecure,
-          positives: validationResult.virusTotal.positives,
-          total: validationResult.virusTotal.total,
-          scanId: validationResult.virusTotal.scanId,
-          permalink: validationResult.virusTotal.permalink,
-          status: validationResult.virusTotal.positives === -1 ? 'pending' : 'completed'
-        } : {
-          status: 'unavailable',
-          reason: 'VirusTotal API not available or failed'
-        },
-        communityRating: validationResult.community ? {
-          confidence: validationResult.community.confidence,
-          safeVotes: validationResult.community.safeVotes,
-          unsafeVotes: validationResult.community.unsafeVotes
-        } : undefined,
-        userTag: null, // No mock tag for real scans
-        scanDuration: scanDuration
-      };
-      
-      // Add to beginning of history array
-      history.unshift(newEntry);
-      
-      // Keep only last 100 entries to prevent storage overflow
-      const trimmedHistory = history.slice(0, 100);
-      
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
-    } catch (error) {
-      console.error('Error saving to history:', error);
-    }
-  };
+  // Fifth, display the results overlay
+  
 
+  // Fifth, add metadate details to the scan
   const handleQRCodeScanned = async ({ data }: { data: string }) => {
     const now = Date.now();
     
@@ -580,45 +312,72 @@ export default function CameraScannerScreen() {
     // Truncate very long data
     const truncatedData = data.length > 2048 ? data.substring(0, 2048) : data;
 
-    try {
-      const result = await validateUrl(truncatedData);
-      setValidationResult(result);
+    // try {
+      const result = await validateHTTP(truncatedData);
+      setValidationResult(result)
       
       // Save to history
-      await saveToHistory(truncatedData, result, scanStartTime);
-    } catch (error) {
-      console.error('Scan processing error:', error);
-      Alert.alert('Error', 'Failed to process QR code');
-      setIsScanning(true);
-    }
+    //   await saveToHistory(truncatedData, result, scanStartTime);
+    // } catch (error) {
+    //   console.error('Scan processing error:', error);
+    //   setIsScanning(true);
+    // }
   };
 
-  const handleManualInput = async () => {
-    if (!manualUrl.trim()) {
-      Alert.alert('Error', 'Please enter a URL');
-      return;
-    }
+  // Sixth, save the scan to the History tab
+  // const saveToHistory = async (scanData: string, scanStartTime: number) => {
+  //   try {
+  //     const STORAGE_KEY = '@safe_scan_history';
+  //     const existingHistory = await AsyncStorage.getItem(STORAGE_KEY);
+  //     const history = existingHistory ? JSON.parse(existingHistory) : [];
+      
+  //     const scanEndTime = Date.now();
+  //     const scanDuration = scanEndTime - scanStartTime;
+      
+  //     const newEntry = {
+  //       id: `scan_${scanEndTime}`,
+  //       qrData: scanData,
+  //       url: validationResult.url,
+  //       timestamp: scanEndTime,
+  //       safetyStatus: !validationResult.virusTotal || validationResult.virusTotal.positives === -1 
+  //         ? 'unknown' 
+  //         : (validationResult.isSecure ? 'safe' : 'unsafe'),
+  //       virusTotalResult: validationResult.virusTotal ? {
+  //         isSecure: validationResult.virusTotal.isSecure,
+  //         positives: validationResult.virusTotal.positives,
+  //         total: validationResult.virusTotal.total,
+  //         scanId: validationResult.virusTotal.scanId,
+  //         permalink: validationResult.virusTotal.permalink,
+  //         status: validationResult.virusTotal.positives === -1 ? 'pending' : 'completed'
+  //       } : {
+  //         status: 'unavailable',
+  //         reason: 'VirusTotal API not available or failed'
+  //       },
+  //       communityRating: validationResult.community ? {
+  //         confidence: validationResult.community.confidence,
+  //         safeVotes: validationResult.community.safeVotes,
+  //         unsafeVotes: validationResult.community.unsafeVotes
+  //       } : undefined,
+  //       userTag: null, // No mock tag for real scans
+  //       scanDuration: scanDuration
+  //     };
+      
+  //     // Add to beginning of history array
+  //     history.unshift(newEntry);
+      
+  //     // Keep only last 100 entries to prevent storage overflow
+  //     const trimmedHistory = history.slice(0, 100);
+      
+  //     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+  //   } catch (error) {
+  //     console.error('Error saving to history:', error);
+  //   }
+  // };
 
-    const scanStartTime = Date.now();
-    setShowManualInput(false);
-    const result = await validateUrl(manualUrl);
-    setValidationResult(result);
-    
-    // Save to history
-    await saveToHistory(manualUrl, result, scanStartTime);
-    
-    setManualUrl('');
-  };
-
+  // Seventh, reset the scanner
   const resetScanner = () => {
     setValidationResult(null);
     setIsScanning(true);
-  };
-
-  const testOpenLink = () => {
-    const testUrl = 'https://www.google.com';
-    console.log('Testing with known good URL:', testUrl);
-    openLink(testUrl);
   };
 
   const toggleCamera = () => {
@@ -626,17 +385,17 @@ export default function CameraScannerScreen() {
   };
 
   // Settings functionality - shared with explore tab
-  const STORAGE_KEY = '@safe_scan_history';
+  // const STORAGE_KEY = '@safe_scan_history';
 
-  const getHistoryFromStorage = async () => {
-    try {
-      const data = await AsyncStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error loading history:', error);
-      return [];
-    }
-  };
+  // const getHistoryFromStorage = async () => {
+  //   try {
+  //     const data = await AsyncStorage.getItem(STORAGE_KEY);
+  //     return data ? JSON.parse(data) : [];
+  //   } catch (error) {
+  //     console.error('Error loading history:', error);
+  //     return [];
+  //   }
+  // };
 
   const exportToCSV = async () => {
     try {
@@ -817,43 +576,6 @@ export default function CameraScannerScreen() {
   };
 
   const translateX = useSharedValue(0);
-  const swipeThreshold = 100;
-
-  const handleSwipeGesture = (event: any) => {
-    'worklet';
-    const { translationX, state } = event.nativeEvent;
-    
-    if (state === State.ACTIVE) {
-      translateX.value = translationX;
-    } else if (state === State.END) {
-      if (translationX > swipeThreshold) {
-        // Swipe right - Open link
-        translateX.value = withSpring(0);
-        if (validationResult) {
-          runOnJS(openLink)(validationResult.url);
-        }
-      } else if (translationX < -swipeThreshold) {
-        // Swipe left - Continue scanning (acknowledge risk)
-        translateX.value = withSpring(0);
-        runOnJS(handleSwipeLeftAcknowledge)();
-      } else {
-        // Snap back to center
-        translateX.value = withSpring(0);
-      }
-    }
-  };
-
-  const handleSwipeLeftAcknowledge = () => {
-    if (!validationResult?.isSecure) {
-      Alert.alert(
-        'Security Risk Acknowledged',
-        'You have acknowledged the security risk and chosen not to proceed with this QR code.',
-        [{ text: 'OK', onPress: resetScanner }]
-      );
-    } else {
-      resetScanner();
-    }
-  };
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -1108,12 +830,6 @@ export default function CameraScannerScreen() {
             <Text style={[styles.buttonText, { color: colors.tint }]}>Manual Input</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.controlButton, { backgroundColor: '#4CAF50' }]}
-            onPress={testOpenLink}
-          >
-            <Text style={styles.buttonText}>Test Link</Text>
-          </TouchableOpacity>
         </ThemedView>
       </ThemedView>
 
