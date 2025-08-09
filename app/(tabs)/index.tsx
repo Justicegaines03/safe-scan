@@ -65,6 +65,7 @@ export default function CameraScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraType, setCameraType] = useState<CameraType>('back');
   const [isScanning, setIsScanning] = useState(true);
+  const [isValidating, setIsValidating] = useState(false);
   const [lastScanTime, setLastScanTime] = useState(0);
   const [scanCount, setScanCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -113,7 +114,7 @@ export default function CameraScannerScreen() {
         return null;
       }
 
-      // Use VirusTotal API v3 with proper URL encoding 
+      /// Use VirusTotal API v3 with proper URL encoding 
       console.log('-VirusTotal URL ID:', urlId, 'for URL:', url);
     
       try{
@@ -142,7 +143,7 @@ export default function CameraScannerScreen() {
         const reportData = await reportResponse.json();
         console.log('VirusTotal response:', reportData);
 
-        // Extract scan results from the response
+        /// Extract scan results from the response
         const attributes = reportData.data?.attributes;
         if (!attributes) {
           console.warn('No attributes found in VirusTotal response');
@@ -155,7 +156,7 @@ export default function CameraScannerScreen() {
           return null;
         }
 
-        // Calculate positives and total
+        /// Calculate positives and total
         const positives = stats.malicious + stats.suspicious;
         const total = stats.harmless + stats.malicious + stats.suspicious + stats.undetected;
         const isSecure = positives/total <0.02;
@@ -260,7 +261,7 @@ export default function CameraScannerScreen() {
         }
       }
     } else if (virusTotalResult && communityRating) {
-      // Both data sources available
+      /// Both data sources available
       if (virusTotalResult.positives === -1) {
         /// VirusTotal scan is pending, rely more on community
         warning = 'VirusTotal scan in progress - relying on community data';
@@ -414,6 +415,7 @@ export default function CameraScannerScreen() {
     setIsScanning(true);
   };
 
+  // Toggles camera back and front
   const toggleCamera = () => {
     setCameraType(current => current === 'back' ? 'front' : 'back');
   };
@@ -617,6 +619,8 @@ export default function CameraScannerScreen() {
     };
   });
 
+  
+//JSX UI
   if (!permission) {
     return (
       <ThemedView style={styles.container}>
@@ -653,6 +657,7 @@ export default function CameraScannerScreen() {
     );
   }
 
+  //Results Overlay UI
   if (validationResult) {
     return (
       <GestureHandlerRootView style={styles.container}>
@@ -688,112 +693,114 @@ export default function CameraScannerScreen() {
               barcodeScannerSettings={{
                 barcodeTypes: ['qr'],
               }}
-            >
-              {/* Camera darkening overlay */}
-              <View style={styles.cameraDarkenOverlay} />
-              
-              {/* Results overlay */}
-              <View style={styles.resultsOverlay}>
-                <ThemedView style={styles.overlayContent}>
-                  {/* VirusTotal Status */}
-                  <ThemedView style={[
-                    styles.quickDetailCard,
-                    { 
-                      backgroundColor: !validationResult.virusTotal 
-                        ? '#FFA726' // Orange for unknown/unavailable
-                        : validationResult.isSecure === null
-                        ? '#FFA726' // Orange for pending scans
-                        : (validationResult.isSecure === true ? '#2E7D32' : '#C62828'), // Green for clean, red for threat
-                        padding: 6, 
-                        borderRadius: 20, 
-                        marginBottom: 8
-                      }
-                      ]}>
-                      <SymbolView  
-                        name="shield.checkered"
-                      size={styles.iconSize.fontSize} 
-                      tintColor="#FFFFFF" 
-                    />
-                    <ThemedText style={[
-                      styles.detailTitle,
-                      { color: '#FFFFFF' }
-                    ]}>
-                      {validationResult.virusTotal 
-                        ? (validationResult.virusTotal.positives === 0 ? ' Clean' : ' Threat')
-                        : ' Unknown'} 
-                    </ThemedText>
-                  </ThemedView>
-
-                  {/* Security Status */}
-                  <ThemedText type="title" style={[styles.quickResultTitle, { backgroundColor: 'transparent', fontSize: 28 }]}>
-                    {!validationResult.virusTotal ? 'Warning' : (validationResult.isSecure ? 'Safe' : 'Unsafe')}
-                  </ThemedText>
-
-                  {/* Community Rating */}
-                  <ThemedView style={[styles.quickDetailCard, { backgroundColor: 'transparent', padding: 0 }]}>
-                    <SymbolView 
-                      name="person.3" 
-                      size={styles.iconSize.fontSize + 7} 
-                      tintColor="#FFFFFF" 
-                    />
-                    <ThemedText style={[
-                      styles.detailTitle,
-                      { color: '#FFFFFF' }
-                    ]}>
-                      {!validationResult.community || validationResult.community.totalVotes === 0 
-                        ? '  No votes' 
-                        : `  ${validationResult.community.safeVotes || 0} safe votes`}
-                    </ThemedText>
-                  </ThemedView>
-                </ThemedView>
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionButtonsContainer}>
-                <TouchableOpacity style={styles.actionButton} onPress={resetScanner}>
-                  <SymbolView 
-                  name="xmark" 
-                  size={styles.iconSize.fontSize}
-                  tintColor="#FF0000" 
-                  />
-                  <Text style={styles.actionButtonText}>Scan New</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.actionButton} 
-                  onPress={() => {
-                    console.log('Open button pressed');
-                    console.log('validationResult:', validationResult);
-                    console.log('URL to open:', validationResult?.url);
-                    if (validationResult?.url) {
-                      openLink(validationResult.url);
-                    } else {
-                      console.error('No URL available in validationResult');
-                      Alert.alert('Error', 'No URL available to open');
+            />
+            
+            {/* Camera darkening overlay - positioned absolutely */}
+            <View style={styles.cameraDarkenOverlay} />
+            
+            {/* Results overlay - positioned absolutely */}
+            <View style={styles.resultsOverlay}>
+              <ThemedView style={styles.overlayContent}>
+                {/* VirusTotal Status */}
+                <ThemedView style={[
+                  styles.quickDetailCard,
+                  { 
+                    backgroundColor: !validationResult.virusTotal 
+                      ? '#FFA726' // Orange for unknown/unavailable
+                      : validationResult.virusTotal.isSecure === null
+                      ? '#FFA726' // Orange for pending scans
+                      : (validationResult.virusTotal.isSecure === true ? '#2E7D32' : '#C62828'), // Green for clean, red for threat
+                      padding: 6, 
+                      borderRadius: 20, 
+                      marginBottom: 8
                     }
-                  }}
-                >
-                  <SymbolView 
-                  name="arrow.up.forward" 
-                  size={styles.largeIconSize.fontSize}
-                  tintColor="#00AA00" 
+                    ]}>
+                    <SymbolView  
+                      name="shield.checkered"
+                    size={styles.iconSize.fontSize} 
+                    tintColor="#FFFFFF" 
                   />
-                  <Text style={styles.actionButtonText}>Open</Text>
-                </TouchableOpacity>
-              </View>
+                  <ThemedText style={[
+                    styles.detailTitle,
+                    { color: '#FFFFFF' }
+                  ]}>
+                    {validationResult.virusTotal 
+                      ? (validationResult.virusTotal.positives === 0 ? ' Clean' : ' Threat')
+                      : ' Unknown'} 
+                  </ThemedText>
+                </ThemedView>
 
-              {isValidating && (
-                <View style={styles.cameraLoadingOverlay}>
-                  <ActivityIndicator size="large" color="#00E676" />
-                </View>
-              )}
-            </CameraView>
+                {/* Security Status */}
+                <ThemedText type="title" style={[styles.quickResultTitle, { backgroundColor: 'transparent', fontSize: 28 }]}>
+                  {!validationResult.virusTotal ? 'Warning' : (validationResult.virusTotal.isSecure ? 'Safe' : 'Unsafe')}
+                </ThemedText>
+
+                {/* Community Rating */}
+                <ThemedView style={[styles.quickDetailCard, { backgroundColor: 'transparent', padding: 0 }]}>
+                  <SymbolView 
+                    name="person.3" 
+                    size={styles.iconSize.fontSize + 7} 
+                    tintColor="#FFFFFF" 
+                  />
+                  <ThemedText style={[
+                    styles.detailTitle,
+                    { color: '#FFFFFF' }
+                  ]}>
+                    {!validationResult.community || validationResult.community.totalVotes === 0 
+                      ? '  No votes' 
+                      : `  ${validationResult.community.safeVotes || 0} safe votes`}
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+            </View>
+
+            {/* Action Buttons - positioned absolutely */}
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity style={styles.actionButton} onPress={resetScanner}>
+                <SymbolView 
+                name="xmark" 
+                size={styles.iconSize.fontSize}
+                tintColor="#FF0000" 
+                />
+                <Text style={styles.actionButtonText}>Scan New</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.actionButton} 
+                onPress={() => {
+                  console.log('Open button pressed');
+                  console.log('validationResult:', validationResult);
+                  console.log('URL to open:', validationResult?.url);
+                  if (validationResult?.url) {
+                    openLink(validationResult.url);
+                  } else {
+                    console.error('No URL available in validationResult');
+                    Alert.alert('Error', 'No URL available to open');
+                  }
+                }}
+              >
+                <SymbolView 
+                name="arrow.up.forward" 
+                size={styles.largeIconSize.fontSize}
+                tintColor="#00AA00" 
+                />
+                <Text style={styles.actionButtonText}>Open</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Loading overlay - positioned absolutely */}
+            {isValidating && (
+              <View style={styles.cameraLoadingOverlay}>
+                <ActivityIndicator size="large" color="#00E676" />
+              </View>
+            )}
           </View>
         </ThemedView>
       </GestureHandlerRootView>
     );
   }
 
+  //Scanning UI
   return (
     <GestureHandlerRootView style={styles.container}>
       <ThemedView style={styles.container}>
@@ -827,26 +834,28 @@ export default function CameraScannerScreen() {
             barcodeScannerSettings={{
               barcodeTypes: ['qr'],
             }}
-          >
-            <View style={styles.overlay}>
-              {!isValidating && (
-                <>
-                  <View style={styles.scanFrame} />
-                  <ThemedText style={styles.scanText}>
-                    Point camera at QR code
-                  </ThemedText>
-                  <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
-                  </ThemedText>
-                </>
-              )}
-            </View>
-
-            {isValidating && (
-                <View style={styles.cameraLoadingOverlay}>
-                <ActivityIndicator size="large" color="#00E676" />
-                </View>
+          />
+          
+          {/* Overlay - positioned absolutely */}
+          <View style={styles.overlay}>
+            {!isValidating && (
+              <>
+                <View style={styles.scanFrame} />
+                <ThemedText style={styles.scanText}>
+                  Point camera at QR code
+                </ThemedText>
+                <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
+                </ThemedText>
+              </>
             )}
-          </CameraView>
+          </View>
+
+          {/* Loading overlay - positioned absolutely */}
+          {isValidating && (
+              <View style={styles.cameraLoadingOverlay}>
+              <ActivityIndicator size="large" color="#00E676" />
+              </View>
+          )}
         </View>
 
         <ThemedView style={styles.controlsContainer}>
@@ -863,7 +872,6 @@ export default function CameraScannerScreen() {
           >
             <Text style={[styles.buttonText, { color: colors.tint }]}>Manual Input</Text>
           </TouchableOpacity>
-
         </ThemedView>
       </ThemedView>
 
