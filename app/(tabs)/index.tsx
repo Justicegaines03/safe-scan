@@ -620,7 +620,7 @@ export default function CameraScannerScreen() {
   });
 
   
-//JSX UI
+//JSX UX
   if (!permission) {
     return (
       <ThemedView style={styles.container}>
@@ -657,7 +657,7 @@ export default function CameraScannerScreen() {
     );
   }
 
-  //Results Overlay UI
+  //Results Overlay UX
   if (validationResult) {
     return (
       <GestureHandlerRootView style={styles.container}>
@@ -800,7 +800,7 @@ export default function CameraScannerScreen() {
     );
   }
 
-  //Scanning UI
+  //Scanning UX
   return (
     <GestureHandlerRootView style={styles.container}>
       <ThemedView style={styles.container}>
@@ -826,6 +826,7 @@ export default function CameraScannerScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Camera and scanner */}
         <View style={styles.cameraContainer}>
           <CameraView
             style={styles.camera}
@@ -1004,10 +1005,14 @@ export default function CameraScannerScreen() {
   );
 }
 
+
+//JSX UI
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
+  // Header
   headerContainer: {
     position: 'absolute',
     top: 0, // Changed to 0 to reach the very top
@@ -1055,10 +1060,11 @@ const styles = StyleSheet.create({
   largeIconSize: {
     fontSize: 28, // Changed from 24 to 28 - you can adjust this value
   },
+
+  //Camera
   cameraContainer: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 110 : 80, // Adjusted for new header position
-    backgroundColor: '#007031', // Changed to green
+    paddingTop: Platform.OS === 'ios' ? 110 : 80, // Padding for header
     },
     camera: {
     flex: 1,
@@ -1074,10 +1080,14 @@ const styles = StyleSheet.create({
     pointerEvents: 'none', // Allow touch events to pass through
   },
   overlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'transparent',
   },
   scanFrame: {
     width: 250,
@@ -1094,6 +1104,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
+  
   controlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
