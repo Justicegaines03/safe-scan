@@ -32,6 +32,25 @@ import { SymbolView } from 'expo-symbols';
 import Constants from 'expo-constants';
 import { backendInfrastructure } from '@/services';
 
+
+// Simple hash function that works in React Native for the  Web Crypto API
+const hashUrl = async (url: string): Promise<string> => {
+  let hash = 0;
+  for (let i = 0; i < url.length; i++) {
+    const char = url.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16);
+};
+
+// VirusTotal API v3 expects URLs to be base64 encoded without padding
+const createUrlId = (url: string): string => {
+  const base64Url = btoa(url).replace(/=/g, '');
+  return base64Url;
+};
+
+
 interface VirusTotalResult {
   positives: number;
   total: number;
@@ -58,6 +77,13 @@ interface ResultsOverlay {
   safety?: SafetyAssessment
 }
 
+interface ValidationResult {
+  virusTotal?: VirusTotalResult
+  community?: CommunityRating;
+  safety?: SafetyAssessment
+  url: string
+}
+
 const { width, height } = Dimensions.get('window');
 
 export default function CameraScannerScreen() {
@@ -66,6 +92,7 @@ export default function CameraScannerScreen() {
   const [cameraType, setCameraType] = useState<CameraType>('back');
   const [isScanning, setIsScanning] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [lastScanTime, setLastScanTime] = useState(0);
   const [scanCount, setScanCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -113,10 +140,11 @@ export default function CameraScannerScreen() {
         console.error('VirusTotal API key not configured');
         return null;
       }
-
-      /// Use VirusTotal API v3 with proper URL encoding 
-      console.log('-VirusTotal URL ID:', urlId, 'for URL:', url);
-    
+      
+      /// Create URL ID for VirusTotal API v3
+      const urlId = createUrlId(url);
+      console.log('VirusTotal URL ID:', urlId, 'for URL:', url);
+      
       try{
         let reportResponse = await fetch(
           `https://www.virustotal.com/api/v3/urls/${urlId}`,
@@ -180,20 +208,29 @@ export default function CameraScannerScreen() {
   const getCommunityRating = async (url: string): Promise<CommunityRating | null> => {
     if (!backendInfrastructure) {
       console.error('Backend infrastructure not initialized');
+      return null;
     }
 
-    const qrHash = await hashUrl(url);
-    const rating = await backendInfrastructure.getCommunityRating(qrHash);
-    const communityConfidence = rating.safeVotes/rating.totalVotes
+    try {
+      const qrHash = await hashUrl(url);
+      const rating = await backendInfrastructure.getCommunityRating(qrHash);
+      
+      if (!rating) {
+        console.log('No community rating found for this URL.');
+        return null;
+      }
 
-    if (!rating) {
-      console.log('No community rating found for this URL.');
+      const communityConfidence = rating.totalVotes > 0 ? rating.safeVotes / rating.totalVotes : 0;
+
+      return {
+        safeVotes: rating.safeVotes,
+        totalVotes: rating.totalVotes,
+        communityConfidence: communityConfidence
+      };
+    } catch (error) {
+      console.error('Error getting community rating:', error);
+      return null;
     }
-    return {
-      safeVotes: rating.safeVotes,
-      totalVotes: rating.totalVotes,
-      communityConfidence: communityConfidence
-    };
   };
 
   // Call the VirusTotal and Community Ratings 
@@ -209,7 +246,7 @@ export default function CameraScannerScreen() {
     communityRating = await getCommunityRating(processedUrl);
 
     /// Calculate final safety assessment
-    let safety = false; // Default to conservative (unsafe) until proven otherwise
+    let isSafe = false; // Fix: declare isSafe variable
     let confidence = 0.5;
     let warning: string | undefined;
 
@@ -239,7 +276,7 @@ export default function CameraScannerScreen() {
     } else if (!virusTotalResult && communityRating) {
       /// Only community data available
       warning = 'VirusTotal scan unavailable - relying on community data only';
-      confidence = communityRating.confidence * 0.6; // Reduced confidence without VirusTotal
+      confidence = communityRating.communityConfidence * 0.6; // Reduced confidence without VirusTotal
       isSafe = confidence > 0.7;
     } else if (virusTotalResult && !communityRating) {
       /// Only VirusTotal data available
@@ -265,7 +302,7 @@ export default function CameraScannerScreen() {
       if (virusTotalResult.positives === -1) {
         /// VirusTotal scan is pending, rely more on community
         warning = 'VirusTotal scan in progress - relying on community data';
-        confidence = communityRating.confidence * 0.8;
+        confidence = communityRating.communityConfidence * 0.8;
         isSafe = confidence > 0.7;
       } else {
         /// Both sources have valid data
@@ -282,7 +319,7 @@ export default function CameraScannerScreen() {
 
         /// Only modify VirusTotal result if there's significant community data
         if (communityRating.totalVotes >= 3) {
-          const communityConfidence = communityRating.confidence;
+          const communityConfidence = communityRating.communityConfidence;
           /// Combine when there's actual community input (≥3 votes)
           const vtWeight = 0.75;
           const communityWeight = 0.25;
@@ -309,10 +346,10 @@ export default function CameraScannerScreen() {
     const safetyResult: SafetyAssessment = {
       virusTotal: virusTotalResult || undefined,
       community: communityRating || undefined,
-      safety: isSafe
+      safety: isSafe // Fix: use isSafe instead of safety
     };
 
-    console.log(`Final Safety Assessment: ${safety ? 'SAFE' : 'UNSAFE'}`);
+    console.log(`Final Safety Assessment: ${isSafe ? 'SAFE' : 'UNSAFE'}`); // Fix: use isSafe
     
     return {
       virusTotal: virusTotalResult || undefined,
@@ -341,15 +378,31 @@ export default function CameraScannerScreen() {
     setLastScanTime(now);
     setIsScanning(false);
     setScanCount(prev => prev + 1);
-
-    /// Truncate very long data
-    const truncatedData = data.length > 2048 ? data.substring(0, 2048) : data;
     
     try {
-      /// Results Overlay appears
-      const result = await validateHTTP(truncatedData);
-      setValidationResult(result);
-    
+      /// Validate if it's a valid HTTP/HTTPS URL
+      const validatedUrl = validateHTTP(data);
+
+      if (!validatedUrl) {
+        Alert.alert('Invalid URL', 'The scanned QR code does not contain a valid HTTP or HTTPS URL');
+        setIsScanning(true);
+        setIsValidating(false);
+        return;
+      }
+      
+      /// Perform safety assessment with the validated URL
+      const safetyResult = await safetyAssessment(validatedUrl);
+
+      const validationResult: ValidationResult = {
+        virusTotal: safetyResult.virusTotal,
+        community: safetyResult.community,
+        safety: safetyResult.safety,
+        url: validatedUrl // Add the validated URL to the result
+      };
+
+      setValidationResult(validationResult);
+      setIsValidating(false);
+
       /// Save to history
       // await saveToHistory(truncatedData, result, scanStartTime);
     } catch (error) {
@@ -357,7 +410,6 @@ export default function CameraScannerScreen() {
       setIsScanning(true);
     }
   };
-    const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
   // Save the scan to the History tab
   // const saveToHistory = async (scanData: string, scanStartTime: number) => {
