@@ -50,8 +50,8 @@ const createUrlId = (url: string): string => {
   return base64Url;
 };
 
-
-interface VirusTotalResult {
+// Types
+export interface VirusTotalResult {
   positives: number;
   total: number;
   isSecure: boolean;
@@ -59,25 +59,25 @@ interface VirusTotalResult {
   permalink: string;
 }
 
-interface CommunityRating {
+export interface CommunityRating {
   safeVotes: number;
   totalVotes: number;
   communityConfidence: number;
 }
 
-interface SafetyAssessment {
+export interface SafetyAssessment {
   virusTotal?: VirusTotalResult
   community?: CommunityRating
-  safety: boolean
+  safety: 'safe' | 'unsafe' | 'unknown';
 }
 
-interface ResultsOverlay {
+export interface ResultsOverlay {
   virusTotal?: VirusTotalResult;
   community?: CommunityRating;
   safety?: SafetyAssessment
 }
 
-interface ValidationResult {
+export interface ValidationResult {
   virusTotal?: VirusTotalResult
   community?: CommunityRating;
   safety?: SafetyAssessment
@@ -426,8 +426,8 @@ export default function CameraScannerScreen() {
         scanDuration: scanDuration,
         timestamp: scanEndTime,
         qrData: scanData,
-        safetyStatus: !scanData.safety,
         virusTotalResult: scanData.virusTotal, 
+        safetyStatus: !scanData.safety,
         communityRating: scanData.community, 
         url: scanData.url,
       };
@@ -439,6 +439,7 @@ export default function CameraScannerScreen() {
       const trimmedHistory = history.slice(0, 100);
       
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+      console.log('Saved to History', newEntry)
     } catch (error) {
       console.error('Error saving to history:', error);
     }

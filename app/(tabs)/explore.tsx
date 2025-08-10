@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
+import { useFocusEffect } from '@react-navigation/native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -24,10 +25,9 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 // Types
 interface ScanHistoryEntry {
   id: string;
-  qrData: string;
-  url?: string;
+  scanDuration?: number;
   timestamp: number;
-  safetyStatus: 'safe' | 'unsafe' | 'unknown';
+  qrData: string;
   virusTotalResult?: {
     isSecure: boolean;
     positives: number;
@@ -35,13 +35,14 @@ interface ScanHistoryEntry {
     scanId: string;
     permalink: string;
   };
+  safetyStatus: 'safe' | 'unsafe' | 'unknown';
   communityRating?: {
     confidence: number;
     safeVotes: number;
     unsafeVotes: number;
   };
-  userTag?: 'safe' | 'unsafe' | null;
-  scanDuration?: number;
+  url?: string;
+  userRating?: 'safe' | 'unsafe' | null;
   isMockData?: boolean; // Flag to identify mock training data
 }
 
@@ -71,30 +72,36 @@ export default function ScanHistoryScreen() {
   const [editingTag, setEditingTag] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
+  // Reloads history every time the tab comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [])
+  );
 
+  // Runs whenever the history data changes
   useEffect(() => {
     applyFilters();
   }, [history, searchQuery, selectedFilter]);
 
+//History Tab
+  //Loads the History tab
   const loadHistory = async () => {
     try {
       setIsLoading(true);
       
-      // Load existing history from storage
+      /// Load existing history from storage
       const data = await AsyncStorage.getItem(STORAGE_KEY);
       let existingHistory: ScanHistoryEntry[] = data ? JSON.parse(data) : [];
       
-      // Separate real scans from mock data
+      /// Separate real scans from mock data
       const existingMockData = existingHistory.filter(entry => entry.isMockData);
       const realScans = existingHistory.filter(entry => !entry.isMockData);
       
-      // Combine real scans (newest first) with mock data
-      const combinedHistory = [...realScans, ...mockData];
+      /// Combine real scans (newest first) with mock data
+      const combinedHistory = [...realScans, ...existingMockData];
       
-      // Sort by timestamp (newest first)
+      /// Sort by timestamp (newest first)
       combinedHistory.sort((a, b) => b.timestamp - a.timestamp);
       
       setHistory(combinedHistory);
@@ -110,7 +117,8 @@ export default function ScanHistoryScreen() {
     }
   };
 
-  const saveHistory = async (newHistory: ScanHistoryEntry[]) => {
+  // Updates the History tab with real scans
+  const updateHistory = async (newHistory: ScanHistoryEntry[]) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
     } catch (error) {
@@ -118,6 +126,7 @@ export default function ScanHistoryScreen() {
     }
   };
 
+  // Mock scans for user education
   const generateMockHistory = (): ScanHistoryEntry[] => {
     const now = Date.now();
     const mockEntries: ScanHistoryEntry[] = [
@@ -139,7 +148,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 45,
           unsafeVotes: 1
         },
-        userTag: 'safe',
+        userRating: 'safe',
         scanDuration: 1200,
         isMockData: true // Add flag to identify mock data
       },
@@ -161,7 +170,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 1,
           unsafeVotes: 12
         },
-        userTag: 'unsafe',
+        userRating: 'unsafe',
         scanDuration: 2800,
         isMockData: true
       },
@@ -175,7 +184,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 0,
           unsafeVotes: 0
         },
-        userTag: null,
+        userRating: null,
         scanDuration: 650,
         isMockData: true
       },
@@ -197,7 +206,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 23,
           unsafeVotes: 2
         },
-        userTag: 'safe',
+        userRating: 'safe',
         scanDuration: 980,
         isMockData: true
       },
@@ -211,7 +220,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 8,
           unsafeVotes: 1
         },
-        userTag: 'safe',
+        userRating: 'safe',
         scanDuration: 450,
         isMockData: true
       },
@@ -233,7 +242,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 3,
           unsafeVotes: 7
         },
-        userTag: null,
+        userRating: null,
         scanDuration: 3200,
         isMockData: true
       },
@@ -255,7 +264,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 38,
           unsafeVotes: 2
         },
-        userTag: 'safe',
+        userRating: 'safe',
         scanDuration: 1100,
         isMockData: true
       },
@@ -269,7 +278,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 3,
           unsafeVotes: 2
         },
-        userTag: null,
+        userRating: null,
         scanDuration: 320,
         isMockData: true
       },
@@ -291,7 +300,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 0,
           unsafeVotes: 15
         },
-        userTag: 'unsafe',
+        userRating: 'unsafe',
         scanDuration: 4500,
         isMockData: true
       },
@@ -313,7 +322,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 17,
           unsafeVotes: 2
         },
-        userTag: null,
+        userRating: null,
         scanDuration: 850,
         isMockData: true
       },
@@ -327,7 +336,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 5,
           unsafeVotes: 1
         },
-        userTag: 'safe',
+        userRating: 'safe',
         scanDuration: 580,
         isMockData: true
       },
@@ -341,7 +350,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 0,
           unsafeVotes: 0
         },
-        userTag: null,
+        userRating: null,
         scanDuration: 410,
         isMockData: true
       },
@@ -363,7 +372,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 0,
           unsafeVotes: 25
         },
-        userTag: 'unsafe',
+        userRating: 'unsafe',
         scanDuration: 5200,
         isMockData: true
       },
@@ -385,7 +394,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 52,
           unsafeVotes: 1
         },
-        userTag: 'safe',
+        userRating: 'safe',
         scanDuration: 920,
         isMockData: true
       },
@@ -399,7 +408,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 12,
           unsafeVotes: 0
         },
-        userTag: null,
+        userRating: null,
         scanDuration: 380,
         isMockData: true
       }
@@ -429,10 +438,10 @@ export default function ScanHistoryScreen() {
 
   const updateUserTag = async (entryId: string, newTag: 'safe' | 'unsafe' | null) => {
     const updatedHistory = history.map(entry => 
-      entry.id === entryId ? { ...entry, userTag: newTag } : entry
+      entry.id === entryId ? { ...entry, userRating: newTag } : entry
     );
     setHistory(updatedHistory);
-    await saveHistory(updatedHistory);
+    await updateHistory(updatedHistory);
     setEditingTag(null);
   };
 
@@ -448,7 +457,7 @@ export default function ScanHistoryScreen() {
           onPress: async () => {
             const updatedHistory = history.filter(entry => entry.id !== entryId);
             setHistory(updatedHistory);
-            await saveHistory(updatedHistory);
+            await updateHistory(updatedHistory);
           }
         }
       ]
@@ -516,7 +525,7 @@ export default function ScanHistoryScreen() {
         const communitySafe = entry.communityRating?.safeVotes || '';
         const communityUnsafe = entry.communityRating?.unsafeVotes || '';
         const communityConf = entry.communityRating?.confidence || '';
-        const userTag = entry.userTag || '';
+        const userRating = entry.userRating || '';
         const scanDuration = entry.scanDuration || '';
         
         // Escape quotes and commas in data
@@ -528,7 +537,7 @@ export default function ScanHistoryScreen() {
           return str;
         };
         
-        return `${escapeCSV(entry.id)},${escapeCSV(entry.qrData)},${escapeCSV(url)},${entry.timestamp},${escapeCSV(date)},${escapeCSV(entry.safetyStatus)},${escapeCSV(vtSecure)},${escapeCSV(vtPositives)},${escapeCSV(vtTotal)},${escapeCSV(communitySafe)},${escapeCSV(communityUnsafe)},${escapeCSV(communityConf)},${escapeCSV(userTag)},${escapeCSV(scanDuration)}`;
+        return `${escapeCSV(entry.id)},${escapeCSV(entry.qrData)},${escapeCSV(url)},${entry.timestamp},${escapeCSV(date)},${escapeCSV(entry.safetyStatus)},${escapeCSV(vtSecure)},${escapeCSV(vtPositives)},${escapeCSV(vtTotal)},${escapeCSV(communitySafe)},${escapeCSV(communityUnsafe)},${escapeCSV(communityConf)},${escapeCSV(userRating)},${escapeCSV(scanDuration)}`;
       }).join('\n');
       
       const csvContent = csvHeader + csvRows;
@@ -815,7 +824,7 @@ export default function ScanHistoryScreen() {
             <ThemedView style={styles.detailCard}>
               <ThemedText type="subtitle">User Tag</ThemedText>
               <View style={styles.tagContainer}>
-                <ThemedText>Current tag: {selectedEntry.userTag || 'None'}</ThemedText>
+                <ThemedText>Current tag: {selectedEntry.userRating || 'None'}</ThemedText>
                 <TouchableOpacity
                   style={[styles.button, { backgroundColor: colors.tint }]}
                   onPress={() => setEditingTag(selectedEntry.id)}
