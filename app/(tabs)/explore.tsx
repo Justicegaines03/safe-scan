@@ -76,6 +76,8 @@ export default function ScanHistoryScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [showUserRating, setShowUserRating] = useState(false);
   const [userRating, setUserRating] = useState<'safe' | 'unsafe' | null>(null);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   console.log('State variables initialized');
 
   // Reloads history every time the tab comes into focus
@@ -495,6 +497,23 @@ export default function ScanHistoryScreen() {
     console.log('User tag update completed');
   };
 
+  const updateBulkUserTags = async (entryIds: string[], newTag: 'safe' | 'unsafe' | null) => {
+    console.log('Updating user tags for entries:', entryIds, 'to:', newTag);
+    
+    const updatedHistory = history.map(entry => 
+      entryIds.includes(entry.id) ? { ...entry, userRating: newTag } : entry
+    );
+    
+    console.log('Bulk user tags updated in memory, saving to storage');
+    setHistory(updatedHistory);
+    await updateHistory(updatedHistory);
+    setShowUserRating(false);
+    setSelectedEntry(null);
+    setSelectedEntries(new Set());
+    setIsSelectMode(false);
+    console.log('Bulk user tag update completed');
+  };
+
   const deleteEntry = async (entryId: string) => {
     console.log('Delete entry requested for ID:', entryId);
     
@@ -518,6 +537,47 @@ export default function ScanHistoryScreen() {
             setHistory(updatedHistory);
             await updateHistory(updatedHistory);
             console.log('Entry delete completed');
+          }
+        }
+      ]
+    );
+  };
+
+  const handleBulkRate = () => {
+    if (selectedEntries.size === 0) return;
+    
+    // Set the first selected entry as the main entry for rating
+    const firstSelectedId = Array.from(selectedEntries)[0];
+    const firstEntry = history.find(entry => entry.id === firstSelectedId);
+    if (firstEntry) {
+      setSelectedEntry(firstEntry);
+      setUserRating(firstEntry.userRating || null);
+      setShowUserRating(true);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedEntries.size === 0) return;
+    
+    Alert.alert(
+      'Delete Selected Entries',
+      `Are you sure you want to delete ${selectedEntries.size} selected entries from your history?`,
+      [
+        { 
+          text: 'Cancel', 
+          style: 'cancel'
+        },
+        {
+          text: 'Delete All',
+          style: 'destructive',
+          onPress: async () => {
+            const selectedIds = Array.from(selectedEntries);
+            const updatedHistory = history.filter(entry => !selectedIds.includes(entry.id));
+            setHistory(updatedHistory);
+            await updateHistory(updatedHistory);
+            setSelectedEntries(new Set());
+            setIsSelectMode(false);
+            console.log('Bulk delete completed for', selectedIds.length, 'entries');
           }
         }
       ]
@@ -837,100 +897,137 @@ export default function ScanHistoryScreen() {
     }
   };
 
-  const renderHistoryItem = ({ item }: { item: ScanHistoryEntry }) => (
-    <TouchableOpacity
-      style={[styles.historyItem, { 
-        backgroundColor: colors.background, 
-        borderColor: getStatusColor(item.safetyStatus),
-        borderWidth: 1.5
-      }]}
-      onPress={() => {
+  const renderHistoryItem = ({ item }: { item: ScanHistoryEntry }) => {
+    const isSelected = selectedEntries.has(item.id);
+
+    const handlePress = () => {
+      if (isSelectMode) {
+        // In select mode, toggle selection
+        const newSelectedEntries = new Set(selectedEntries);
+        if (isSelected) {
+          newSelectedEntries.delete(item.id);
+        } else {
+          newSelectedEntries.add(item.id);
+        }
+        setSelectedEntries(newSelectedEntries);
+        console.log('Entry selection toggled:', item.id, 'Selected:', !isSelected);
+      } else {
+        // Normal mode, open rating interface
         console.log('History item selected:', item.id, '- Opening rating interface');
         setSelectedEntry(item);
         setUserRating(item.userRating || null);
         setShowUserRating(true);
-      }}
-      activeOpacity={0.7}
-    >
-      {/* Safety status at the top */}
-      <View style={styles.topStatusContainer}>
-        <View style={styles.statusContainer}>
-          <ThemedText type="title" style={[styles.statusText, { fontSize: 20}]}>
-            {typeof item.safetyStatus === 'string' ? 
-              item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1) : 
-              'Unknown'
-            }
-          </ThemedText>
-          {/* Quick scan time indicator and mock tag */}
-          <View style={styles.scanTimeContainer}>
-            {item.scanDuration && (
-              <ThemedText style={styles.scanTime}>
-                ({Math.round(item.scanDuration / 100) / 10}s)
-              </ThemedText>
-            )}
-            {/* Mock tag for training data */}
-            {item.isMockData && (
-              <View style={styles.mockTag}>
-                <ThemedText style={styles.mockTagText}>Mock</ThemedText>
-              </View>
-            )}
-          </View>
-        </View>
-        <ThemedText style={styles.timestamp}>
-          {formatTimestamp(item.timestamp)}
-        </ThemedText>
-      </View>
-      
-      {/* Link/QR Data in the middle */}
-      <ThemedText style={styles.qrData} numberOfLines={1}>
-        {truncateText(getQRDataString(item.qrData), 60)}
-      </ThemedText>
-      
-      {/* VirusTotal score and Community votes below the link */}
-      <View style={styles.bottomScoresContainer}>
-        {/* Always show VirusTotal section, even if no data */}
-        <View style={[
-          styles.scoreCard,
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.historyItem, 
           { 
-            backgroundColor: !item.virusTotalResult 
-              ? '#9E9E9E' // Gray for unknown/unavailable
-              : item.virusTotalResult.positives === 0 ? '#2E7D32' : '#C62828' 
+            backgroundColor: colors.background, 
+            borderColor: isSelected ? '#007AFF' : getStatusColor(item.safetyStatus),
+            borderWidth: isSelected ? 3 : 1.5,
+            opacity: isSelectMode && !isSelected ? 0.6 : 1
           }
-        ]}>
-          <SymbolView
-            name="shield.checkered"
-            size={16}
-            type="monochrome"
-            tintColor="#FFFFFF"
-            fallback={<ThemedText style={styles.scoreIcon}>VT</ThemedText>}
-          />
-          <ThemedText style={styles.scoreCardText}>
-            {!item.virusTotalResult 
-              ? ' Unknown' 
-              : item.virusTotalResult.positives === 0 ? ' Clean' : ' Threat'}
+        ]}
+        onPress={handlePress}
+        activeOpacity={0.7}
+      >
+        {/* Selection indicator */}
+        {isSelectMode && (
+          <View style={styles.selectionIndicator}>
+            <View style={[
+              styles.selectionCircle,
+              { backgroundColor: isSelected ? '#007AFF' : 'transparent' }
+            ]}>
+              {isSelected && (
+                <ThemedText style={styles.checkmark}>✓</ThemedText>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Safety status at the top */}
+        <View style={styles.topStatusContainer}>
+          <View style={styles.statusContainer}>
+            <ThemedText type="title" style={[styles.statusText, { fontSize: 20}]}>
+              {typeof item.safetyStatus === 'string' ? 
+                item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1) : 
+                'Unknown'
+              }
+            </ThemedText>
+            {/* Quick scan time indicator and mock tag */}
+            <View style={styles.scanTimeContainer}>
+              {item.scanDuration && (
+                <ThemedText style={styles.scanTime}>
+                  ({Math.round(item.scanDuration / 100) / 10}s)
+                </ThemedText>
+              )}
+              {/* Mock tag for training data */}
+              {item.isMockData && (
+                <View style={styles.mockTag}>
+                  <ThemedText style={styles.mockTagText}>Mock</ThemedText>
+                </View>
+              )}
+            </View>
+          </View>
+          <ThemedText style={styles.timestamp}>
+            {formatTimestamp(item.timestamp)}
           </ThemedText>
         </View>
         
-        {/* Always show Community rating section, even if no data */}
-        <View style={styles.communityCard}>
-          <SymbolView
-            name="person.3"
-            size={23}
-            type="monochrome"
-            tintColor="#000000"
-            fallback={<ThemedText style={styles.scoreIcon}>U</ThemedText>}
-          />
-          <ThemedText style={styles.communityCardText}>
-            {!item.communityRating || item.communityRating.safeVotes + item.communityRating.unsafeVotes === 0 
-              ? '  No votes yet' 
-              : item.communityRating.safeVotes === 1 
-                ? `  ${item.communityRating.safeVotes} safe vote`
-                : `  ${item.communityRating.safeVotes} safe votes`}
-          </ThemedText>
+        {/* Link/QR Data in the middle */}
+        <ThemedText style={styles.qrData} numberOfLines={1}>
+          {truncateText(getQRDataString(item.qrData), 60)}
+        </ThemedText>
+        
+        {/* VirusTotal score and Community votes below the link */}
+        <View style={styles.bottomScoresContainer}>
+          {/* Always show VirusTotal section, even if no data */}
+          <View style={[
+            styles.scoreCard,
+            { 
+              backgroundColor: !item.virusTotalResult 
+                ? '#9E9E9E' // Gray for unknown/unavailable
+                : item.virusTotalResult.positives === 0 ? '#2E7D32' : '#C62828' 
+            }
+          ]}>
+            <SymbolView
+              name="shield.checkered"
+              size={16}
+              type="monochrome"
+              tintColor="#FFFFFF"
+              fallback={<ThemedText style={styles.scoreIcon}>VT</ThemedText>}
+            />
+            <ThemedText style={styles.scoreCardText}>
+              {!item.virusTotalResult 
+                ? ' Unknown' 
+                : item.virusTotalResult.positives === 0 ? ' Clean' : ' Threat'}
+            </ThemedText>
+          </View>
+          
+          {/* Always show Community rating section, even if no data */}
+          <View style={styles.communityCard}>
+            <SymbolView
+              name="person.3"
+              size={23}
+              type="monochrome"
+              tintColor="#000000"
+              fallback={<ThemedText style={styles.scoreIcon}>U</ThemedText>}
+            />
+            <ThemedText style={styles.communityCardText}>
+              {!item.communityRating || item.communityRating.safeVotes + item.communityRating.unsafeVotes === 0 
+                ? '  No votes yet' 
+                : item.communityRating.safeVotes === 1 
+                  ? `  ${item.communityRating.safeVotes} safe vote`
+                  : `  ${item.communityRating.safeVotes} safe votes`}
+            </ThemedText>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderDetailsModal = () => {
     if (!selectedEntry) return null;
@@ -1048,7 +1145,9 @@ export default function ScanHistoryScreen() {
         <View style={styles.userRatingOverlay}>
           <ThemedView style={styles.userRatingModalContent}>
             <ThemedText type="subtitle" style={styles.userRatingModalTitle}>
-              Rate this QR code
+              {isSelectMode && selectedEntries.size > 1 
+                ? `Rate ${selectedEntries.size} QR codes` 
+                : 'Rate this QR code'}
             </ThemedText>
             
             <ThemedText style={styles.qrDataPreview} numberOfLines={2}>
@@ -1070,7 +1169,13 @@ export default function ScanHistoryScreen() {
                   const newRating = userRating === 'safe' ? null : 'safe';
                   setUserRating(newRating);
                   if (selectedEntry) {
-                    updateUserTag(selectedEntry.id, newRating);
+                    if (isSelectMode && selectedEntries.size > 0) {
+                      // Bulk update all selected entries
+                      updateBulkUserTags(Array.from(selectedEntries), newRating);
+                    } else {
+                      // Single entry update
+                      updateUserTag(selectedEntry.id, newRating);
+                    }
                   }
                 }}
               >
@@ -1092,7 +1197,13 @@ export default function ScanHistoryScreen() {
                   const newRating = userRating === 'unsafe' ? null : 'unsafe';
                   setUserRating(newRating);
                   if (selectedEntry) {
-                    updateUserTag(selectedEntry.id, newRating);
+                    if (isSelectMode && selectedEntries.size > 0) {
+                      // Bulk update all selected entries
+                      updateBulkUserTags(Array.from(selectedEntries), newRating);
+                    } else {
+                      // Single entry update
+                      updateUserTag(selectedEntry.id, newRating);
+                    }
                   }
                 }}
               >
@@ -1361,17 +1472,29 @@ export default function ScanHistoryScreen() {
         <ThemedText type="title" style={styles.headerTitle}>History</ThemedText>
         <View style={styles.headerActions}>
             <TouchableOpacity
-              style={[styles.quickButton, { backgroundColor: 'transparent', marginRight: 8 }]}
+              style={[styles.selectButton, { backgroundColor: '#D3D3D3'}]}
+              onPress={() => {
+              console.log('Select mode toggled, current state:', isSelectMode);
+              setIsSelectMode(!isSelectMode);
+              setSelectedEntries(new Set()); // Clear selections when toggling
+              }}
+            >
+              <ThemedText style={[styles.selectButtonText, { color: '#007AFF' }]}>
+              {isSelectMode ? 'Cancel' : 'Select'}
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.selectButton, { backgroundColor: '#D3D3D3', marginRight: 8 }]}
               onPress={() => {
                 console.log('Filter toggle pressed, current state:', showFilters);
                 setShowFilters(!showFilters);
               }}
             >
               <SymbolView
-              name="line.3.horizontal.decrease.circle"
-              size={35}
+              name="slider.horizontal.3"
+              size={24}
               type="monochrome"
-              tintColor="#000000"
+              tintColor="#007AFF"
               fallback={<ThemedText style={styles.quickButtonText}>Filter</ThemedText>}
               />
             </TouchableOpacity>
@@ -1479,6 +1602,24 @@ export default function ScanHistoryScreen() {
           }
           showsVerticalScrollIndicator={false}
         />
+      )}
+
+      {/* Bulk action buttons - only show when in select mode and have selections */}
+      {isSelectMode && selectedEntries.size > 0 && (
+        <View style={styles.bulkActionContainer}>
+          <TouchableOpacity
+            style={styles.bulkActionButton}
+            onPress={handleBulkRate}
+          >
+            <ThemedText style={styles.bulkActionText}>Rate</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.bulkActionButton, styles.deleteActionButton]}
+            onPress={handleBulkDelete}
+          >
+            <ThemedText style={[styles.bulkActionText, styles.deleteActionText]}>Trash</ThemedText>
+          </TouchableOpacity>
+        </View>
       )}
 
       {renderDetailsModal()}
@@ -1990,9 +2131,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   doneButton: {
-    padding: 8,
+    padding: 6,
     width: 60,
+    height: 32,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
   },
   doneButtonText: {
     fontSize: 16,
@@ -2118,5 +2262,74 @@ const styles = StyleSheet.create({
   selectedButtonText: {
     color: '#000',
     fontWeight: 'bold',
+  },
+  selectButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 4,
+  },
+  selectButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectionIndicator: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 1,
+  },
+  selectionCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  bulkActionContainer: {
+    position: 'absolute',
+    bottom: 90, // Moved up to be above the tab bar (typically 80-90px height)
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  bulkActionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#007AFF',
+    marginHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteActionButton: {
+    backgroundColor: '#FF3B30',
+  },
+  bulkActionText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteActionText: {
+    color: '#FFFFFF',
   },
 });
