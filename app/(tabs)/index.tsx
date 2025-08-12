@@ -98,7 +98,9 @@ export default function CameraScannerScreen() {
   const [lastScanTime, setLastScanTime] = useState(0);
   const [scanCount, setScanCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(false);
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
+  const isProcessing = useRef(false); // Immediate flag to prevent duplicate processing
 
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -399,9 +401,16 @@ export default function CameraScannerScreen() {
       return;
     }
 
+    /// Check if already processing (immediate flag to prevent race conditions)
+    if (isProcessing.current) {
+      console.log('Already processing a scan, ignoring duplicate');
+      return;
+    }
+
     const scanStartTime = now;
     setLastScanTime(now);
     setIsScanning(false);
+    isProcessing.current = true; // Set immediate flag
     setScanCount(prev => prev + 1);
     
     try {
@@ -434,6 +443,9 @@ export default function CameraScannerScreen() {
       console.error('Scan processing error:', error);
       setIsScanning(true);
       setIsValidating(false);
+    } finally {
+      /// Always clear the processing flag
+      isProcessing.current = false;
     }
   };
 
@@ -495,6 +507,7 @@ export default function CameraScannerScreen() {
     setUserRating(null);
     setShowUserRating(false);
     setIsScanning(true);
+    isProcessing.current = false; // Reset processing flag
   };
 
   // Toggles camera back and front
@@ -503,17 +516,17 @@ export default function CameraScannerScreen() {
   };
 
   // Settings functionality - shared with explore tab
-  // const STORAGE_KEY = '@safe_scan_history';
+  const STORAGE_KEY = '@safe_scan_history';
 
-  // const getHistoryFromStorage = async () => {
-  //   try {
-  //     const data = await AsyncStorage.getItem(STORAGE_KEY);
-  //     return data ? JSON.parse(data) : [];
-  //   } catch (error) {
-  //     console.error('Error loading history:', error);
-  //     return [];
-  //   }
-  // };
+  const getHistoryFromStorage = async () => {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error loading history:', error);
+      return [];
+    }
+  };
 
   const exportToCSV = async () => {
     try {
