@@ -235,14 +235,20 @@ export default function CameraScannerScreen() {
 
   // Call the VirusTotal and Community Ratings 
   // to make a Safety Assessment
-  const safetyAssessment = async (processedUrl: string): Promise<ResultsOverlay> => {
+  const safetyAssessment = async (processedUrl: string, skipVirusTotal: boolean = false): Promise<ResultsOverlay> => {
     let virusTotalResult: VirusTotalResult | null = null;
     let communityRating: CommunityRating | null = null;
 
-    /// Call VirusTotal API
-    virusTotalResult = await validateWithVirusTotal(processedUrl);
+    /// Call VirusTotal API only for HTTP/HTTPS URLs
+    if (!skipVirusTotal) {
+      console.log('Calling VirusTotal for HTTP/HTTPS URL');
+      virusTotalResult = await validateWithVirusTotal(processedUrl);
+    } else {
+      console.log('Skipping VirusTotal for non-HTTP/HTTPS QR code');
+    }
 
-    /// Call community rating API
+    /// Call community rating API for all URLs/QR data
+    console.log('Calling community rating for QR data');
     communityRating = await getCommunityRating(processedUrl);
 
     /// Calculate final safety assessment
@@ -252,6 +258,7 @@ export default function CameraScannerScreen() {
 
     /// Log the safety assessment calculation
     console.log('Safety Assessment Calculation:');
+    console.log('- Skipped VirusTotal:', skipVirusTotal);
     console.log('- VirusTotal available:', !!virusTotalResult);
     console.log('- Community data available:', !!communityRating);
 
@@ -270,12 +277,20 @@ export default function CameraScannerScreen() {
     /// Handle different data availability scenarios
     if (!virusTotalResult && !communityRating) {
       /// No data from either source
-      warning = 'No security data available from VirusTotal or community - status unknown';
+      if (skipVirusTotal) {
+        warning = 'Non-web content detected - no security data available';
+      } else {
+        warning = 'No security data available from VirusTotal or community - status unknown';
+      }
       confidence = 0;
       isSafe = false;
     } else if (!virusTotalResult && communityRating) {
       /// Only community data available
-      warning = 'VirusTotal scan unavailable - relying on community data only';
+      if (skipVirusTotal) {
+        warning = 'Non-web content - relying on community assessment only';
+      } else {
+        warning = 'VirusTotal scan unavailable - relying on community data only';
+      }
       confidence = communityRating.communityConfidence * 0.6; // Reduced confidence without VirusTotal
       isSafe = confidence > 0.7;
     } else if (virusTotalResult && !communityRating) {
@@ -342,14 +357,22 @@ export default function CameraScannerScreen() {
       warning = 'Some uncertainty in safety assessment';
     }
 
+    /// Determine final safety status
+    let finalSafetyStatus: 'safe' | 'unsafe' | 'unknown';
+    if (confidence === 0 || (!virusTotalResult && !communityRating)) {
+      finalSafetyStatus = 'unknown';
+    } else {
+      finalSafetyStatus = isSafe ? 'safe' : 'unsafe';
+    }
+
     /// Create a safety assessment object
     const safetyResult: SafetyAssessment = {
       virusTotal: virusTotalResult || undefined,
       community: communityRating || undefined,
-      safety: isSafe ? 'safe' : 'unsafe' // Convert boolean to string
+      safety: finalSafetyStatus
     };
 
-    console.log(`Final Safety Assessment: ${isSafe ? 'SAFE' : 'UNSAFE'}`);
+    console.log(`Final Safety Assessment: ${finalSafetyStatus.toUpperCase()}`);
     
     return {
       virusTotal: virusTotalResult || undefined,
@@ -380,24 +403,24 @@ export default function CameraScannerScreen() {
     setScanCount(prev => prev + 1);
     
     try {
-      /// Validate if it's a valid HTTP/HTTPS URL
-      const validatedUrl = validateHTTP(data);
-
-      if (!validatedUrl) {
-        Alert.alert('Invalid URL', 'The scanned QR code does not contain a valid HTTP or HTTPS URL');
-        setIsScanning(true);
-        setIsValidating(false);
-        return;
-      }
+      setIsValidating(true);
       
-      /// Perform safety assessment with the validated URL
-      const safetyResult = await safetyAssessment(validatedUrl);
+      /// Check if it's a valid HTTP/HTTPS URL for VirusTotal processing
+      const validatedUrl = validateHTTP(data);
+      const urlForProcessing = validatedUrl || data; // Use original data if not HTTP/HTTPS
+
+      console.log('QR Code scanned:', data);
+      console.log('Valid HTTP/HTTPS URL:', !!validatedUrl);
+      console.log('Processing with URL:', urlForProcessing);
+      
+      /// Perform safety assessment (will handle non-HTTP URLs appropriately)
+      const safetyResult = await safetyAssessment(urlForProcessing, !validatedUrl);
 
       const validationResult: ValidationResult = {
         virusTotal: safetyResult.virusTotal,
         community: safetyResult.community,
         safety: safetyResult.safety,
-        url: validatedUrl // Add the validated URL to the result
+        url: urlForProcessing
       };
 
       setValidationResult(validationResult);
@@ -408,6 +431,7 @@ export default function CameraScannerScreen() {
     } catch (error) {
       console.error('Scan processing error:', error);
       setIsScanning(true);
+      setIsValidating(false);
     }
   };
 
