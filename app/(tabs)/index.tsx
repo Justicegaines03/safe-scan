@@ -93,6 +93,8 @@ export default function CameraScannerScreen() {
   const [isScanning, setIsScanning] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [userRating, setUserRating] = useState<'safe' | 'unsafe' | null>(null);
+  const [showUserRating, setShowUserRating] = useState(false);
   const [lastScanTime, setLastScanTime] = useState(0);
   const [scanCount, setScanCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -470,6 +472,7 @@ export default function CameraScannerScreen() {
         safetyStatus: getSafetyStatus(), // Now correctly a string
         communityRating: scanData.community, 
         url: scanData.url,
+        userRating: userRating, // Add user's safety rating
         isMockData: false // Mark as real scan data
       };
       
@@ -480,7 +483,7 @@ export default function CameraScannerScreen() {
       const trimmedHistory = history.slice(0, 100);
       
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
-      console.log('Saved to History - ID:', newEntry.id, 'Safety:', newEntry.safetyStatus, 'Mock:', newEntry.isMockData);
+      console.log('Saved to History - ID:', newEntry.id, 'Safety:', newEntry.safetyStatus, 'User Rating:', newEntry.userRating, 'Mock:', newEntry.isMockData);
     } catch (error) {
       console.error('Error saving to history:', error);
     }
@@ -489,6 +492,8 @@ export default function CameraScannerScreen() {
   // Reset the scanner
   const resetScanner = () => {
     setValidationResult(null);
+    setUserRating(null);
+    setShowUserRating(false);
     setIsScanning(true);
   };
 
@@ -794,7 +799,7 @@ export default function CameraScannerScreen() {
                     ]}>
                     <SymbolView  
                       name="shield.checkered"
-                    size={styles.iconSize.fontSize} 
+                    size={styles.virusTotalIconSize.fontSize} 
                     tintColor="#FFFFFF" 
                   />
                   <ThemedText style={[
@@ -816,7 +821,7 @@ export default function CameraScannerScreen() {
                 <ThemedView style={[styles.quickDetailCard, { backgroundColor: 'transparent', padding: 0 }]}>
                   <SymbolView 
                     name="person.3" 
-                    size={styles.iconSize.fontSize + 7} 
+                    size={styles.communityRatingIconSize.fontSize + 7} 
                     tintColor="#FFFFFF" 
                   />
                   <ThemedText style={[
@@ -831,15 +836,102 @@ export default function CameraScannerScreen() {
               </ThemedView>
             </View>
 
+            {/* User Rating Section - positioned absolutely */}
+            {showUserRating && (
+              <View style={styles.userRatingContainer}>
+                <ThemedView style={styles.userRatingContent}>
+                  <ThemedText style={styles.userRatingTitle}>
+                    What do you think about this QR code?
+                  </ThemedText>
+                  
+                  <View style={styles.ratingButtonsContainer}>
+                    <TouchableOpacity 
+                      style={[
+                        styles.ratingButton,
+                        styles.safeButton,
+                        userRating === 'safe' && styles.selectedButton
+                      ]}
+                      onPress={() => {
+                        // Toggle selection - if already safe, deselect; otherwise select safe
+                        const newRating = userRating === 'safe' ? null : 'safe';
+                        setUserRating(newRating);
+                        console.log('User rated QR code as:', newRating || 'deselected');
+                        // Auto-hide after selection
+                        setTimeout(() => setShowUserRating(false));
+                      }}
+                    >
+                      {/* <SymbolView 
+                        name="checkmark.circle.fill" 
+                        size={20}
+                        tintColor={userRating === 'safe' ? "#FFFFFF" : "#2E7D32"} 
+                      /> */}
+                      <Text style={[
+                        styles.ratingButtonText,
+                        userRating === 'safe' && styles.selectedButtonText
+                      ]}>
+                        Safe
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[
+                        styles.ratingButton,
+                        styles.unsafeButton,
+                        userRating === 'unsafe' && styles.selectedButton
+                      ]}
+                      onPress={() => {
+                        // Toggle selection - if already unsafe, deselect; otherwise select unsafe
+                        const newRating = userRating === 'unsafe' ? null : 'unsafe';
+                        setUserRating(newRating);
+                        console.log('User rated QR code as:', newRating || 'deselected');
+                        // Auto-hide after selection
+                        setTimeout(() => setShowUserRating(false));
+                      }}
+                    >
+                      {/* <SymbolView 
+                        name="xmark.circle.fill" 
+                        size={20}
+                        tintColor={userRating === 'unsafe' ? "#FFFFFF" : "#C62828"} 
+                      /> */}
+                      <Text style={[
+                        styles.ratingButtonText,
+                        userRating === 'unsafe' && styles.selectedButtonText
+                      ]}>
+                        Unsafe
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <ThemedText style={styles.userRatingSubtitle}>
+                    You can change this later in the history tab
+                  </ThemedText>
+                </ThemedView>
+              </View>
+            )}
+
             {/* Action Buttons - positioned absolutely */}
             <View style={styles.actionButtonsContainer}>
               <TouchableOpacity style={styles.actionButton} onPress={resetScanner}>
                 <SymbolView 
                 name="xmark" 
-                size={styles.iconSize.fontSize}
+                size={styles.scanNewIconSize.fontSize}
                 tintColor="#FF0000" 
                 />
                 <Text style={styles.actionButtonText}>Scan New</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.actionButton} 
+                onPress={() => {
+                  console.log('Rate button pressed');
+                  setShowUserRating(!showUserRating);
+                }}
+              >
+                <SymbolView 
+                name="star.fill" 
+                size={styles.rateIconSize.fontSize}
+                tintColor="#2672ffff" 
+                />
+                <Text style={styles.actionButtonText}>Rate</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -858,7 +950,7 @@ export default function CameraScannerScreen() {
               >
                 <SymbolView 
                 name="arrow.up.forward" 
-                size={styles.largeIconSize.fontSize}
+                size={styles.openIconSize.fontSize}
                 tintColor="#00AA00" 
                 />
                 <Text style={styles.actionButtonText}>Open</Text>
@@ -1129,13 +1221,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    
   },
-  iconSize: {
-    fontSize: 20, // Changed from 18 to 20 - you can adjust this value
+  
+  virusTotalIconSize: {
+    fontSize: 22
   },
-  largeIconSize: {
-    fontSize: 28, // Changed from 24 to 28 - you can adjust this value
+
+  communityRatingIconSize: {
+    fontSize: 22
+  },
+
+  scanNewIconSize: {
+    fontSize: 35, 
+  },
+
+  rateIconSize:{
+    fontSize: 35,
+  },
+  openIconSize: {
+    fontSize: 35, 
   },
 
   //Camera
@@ -1525,6 +1629,75 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingLeft: 20,
     backgroundColor: 'transparent', // Remove background color
+  },
+  userRatingContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    transform: [{ translateY: -50 }],
+    paddingHorizontal: 0,
+    zIndex: 3,
+  },
+  userRatingContent: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  userRatingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 8, 
+    marginBottom: 8,
+  },
+  userRatingSubtitle: {
+    fontSize: 12,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  ratingButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  ratingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
+  },
+  safeButton: {
+    backgroundColor: 'transparent',
+    borderColor: '#2E7D32',
+    borderWidth: 2,
+  },
+  unsafeButton: {
+    backgroundColor: 'transparent',
+    borderColor: '#C62828',
+    borderWidth: 2,
+  },
+  selectedButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 3,
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+  },
+  ratingButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  selectedButtonText: {
+    color: '#FFFFFF',
   },
   actionButtonsContainer: {
     position: 'absolute',
