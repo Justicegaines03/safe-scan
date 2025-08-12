@@ -421,8 +421,16 @@ export default function CameraScannerScreen() {
       const scanEndTime = Date.now();
       const scanDuration = scanEndTime - scanStartTime;
       
+      // Generate ID starting from 16 to avoid conflict with mock data (IDs 1-15)
+      const getNextScanId = () => {
+        const realScans = history.filter((entry: any) => !entry.isMockData);
+        const existingIds = realScans.map((entry: any) => parseInt(entry.id)).filter((id: number) => !isNaN(id));
+        const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 15;
+        return (maxId + 1).toString();
+      };
+      
       const newEntry = {
-        id: `scan_${scanEndTime}`,
+        id: getNextScanId(),
         scanDuration: scanDuration,
         timestamp: scanEndTime,
         qrData: scanData,

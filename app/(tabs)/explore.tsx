@@ -57,8 +57,11 @@ const STORAGE_KEY = '@safe_scan_history';
 const MAX_HISTORY_DAYS = 30;
 
 export default function ScanHistoryScreen() {
+  console.log('History screen component initialized');
+  
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  console.log('Color scheme detected:', colorScheme);
 
   const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
   const [filteredHistory, setFilteredHistory] = useState<ScanHistoryEntry[]>([]);
@@ -71,38 +74,49 @@ export default function ScanHistoryScreen() {
   const [showDetails, setShowDetails] = useState(false);
   const [editingTag, setEditingTag] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  console.log('State variables initialized');
 
   // Reloads history every time the tab comes into focus
   useFocusEffect(
     useCallback(() => {
+      console.log('History tab focused - loading data');
       loadHistory();
     }, [])
   );
 
   // Runs whenever the history data changes
   useEffect(() => {
+    console.log('History data changed - applying filters');
+    console.log('- Current history entries:', history.length);
+    console.log('- Search query:', searchQuery);
+    console.log('- Selected filter:', selectedFilter);
     applyFilters();
   }, [history, searchQuery, selectedFilter]);
 
 //History Tab
   //Loads the History tab
   const loadHistory = async () => {
+    console.log('Loading history from storage...');
     try {
       setIsLoading(true);
       
       /// Load existing history from storage
       const data = await AsyncStorage.getItem(STORAGE_KEY);
       let existingHistory: ScanHistoryEntry[] = data ? JSON.parse(data) : [];
+      console.log('Loaded history entries from storage:', existingHistory.length);
       
       /// Separate real scans from mock data
       const existingMockData = existingHistory.filter(entry => entry.isMockData);
       const realScans = existingHistory.filter(entry => !entry.isMockData);
+      console.log('Real scan entries:', realScans.length);
+      console.log('Mock data entries:', existingMockData.length);
       
       /// Combine real scans (newest first) with mock data
       const combinedHistory = [...realScans, ...existingMockData];
       
       /// Sort by timestamp (newest first)
       combinedHistory.sort((a, b) => b.timestamp - a.timestamp);
+      console.log('Combined and sorted history entries:', combinedHistory.length);
       
       setHistory(combinedHistory);
       
@@ -110,17 +124,22 @@ export default function ScanHistoryScreen() {
     } catch (error) {
       console.error('Error loading history:', error);
       // Generate mock data on error for development
+      console.log('Generating mock history data for development');
       const mockData = generateMockHistory();
+      console.log('Generated mock entries:', mockData.length);
       setHistory(mockData);
     } finally {
       setIsLoading(false);
+      console.log('History loading completed');
     }
   };
 
   // Updates the History tab with real scans
   const updateHistory = async (newHistory: ScanHistoryEntry[]) => {
+    console.log('Updating history in storage with', newHistory.length, 'entries');
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+      console.log('History successfully saved to storage');
     } catch (error) {
       console.error('Error saving history:', error);
     }
@@ -128,6 +147,7 @@ export default function ScanHistoryScreen() {
 
   // Mock scans for user education
   const generateMockHistory = (): ScanHistoryEntry[] => {
+    console.log('Generating mock history data for user education');
     const now = Date.now();
     const mockEntries: ScanHistoryEntry[] = [
       {
@@ -413,51 +433,79 @@ export default function ScanHistoryScreen() {
         isMockData: true
       }
     ];
+    console.log('Mock history generated with', mockEntries.length, 'entries');
     return mockEntries;
   };
 
   const applyFilters = () => {
+    console.log('Applying filters to history');
+    console.log('- Original history length:', history.length);
+    console.log('- Search query:', searchQuery);
+    console.log('- Status filter:', selectedFilter);
+    
     let filtered = [...history];
 
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
+      console.log('Applying search filter with query:', query);
+      const beforeCount = filtered.length;
       filtered = filtered.filter(entry => 
         entry.qrData.toLowerCase().includes(query) ||
         entry.url?.toLowerCase().includes(query)
       );
+      console.log('Search filter applied, entries reduced from', beforeCount, 'to', filtered.length);
     }
 
     // Apply status filter
     if (selectedFilter !== 'all') {
+      console.log('Applying status filter:', selectedFilter);
+      const beforeCount = filtered.length;
       filtered = filtered.filter(entry => entry.safetyStatus === selectedFilter);
+      console.log('Status filter applied, entries reduced from', beforeCount, 'to', filtered.length);
     }
 
+    console.log('Final filtered history length:', filtered.length);
     setFilteredHistory(filtered);
   };
 
   const updateUserTag = async (entryId: string, newTag: 'safe' | 'unsafe' | null) => {
+    console.log('Updating user tag for entry:', entryId, 'to:', newTag);
+    
     const updatedHistory = history.map(entry => 
       entry.id === entryId ? { ...entry, userRating: newTag } : entry
     );
+    
+    console.log('User tag updated in memory, saving to storage');
     setHistory(updatedHistory);
     await updateHistory(updatedHistory);
     setEditingTag(null);
+    console.log('User tag update completed');
   };
 
   const deleteEntry = async (entryId: string) => {
+    console.log('Delete entry requested for ID:', entryId);
+    
     Alert.alert(
       'Delete Entry',
       'Are you sure you want to delete this scan from your history?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => console.log('Delete entry cancelled by user')
+        },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            console.log('User confirmed delete, removing entry:', entryId);
+            const beforeCount = history.length;
             const updatedHistory = history.filter(entry => entry.id !== entryId);
+            console.log('Entry removed from history, count reduced from', beforeCount, 'to', updatedHistory.length);
             setHistory(updatedHistory);
             await updateHistory(updatedHistory);
+            console.log('Entry delete completed');
           }
         }
       ]
@@ -465,6 +513,7 @@ export default function ScanHistoryScreen() {
   };
 
   const exportHistory = async () => {
+    console.log('Export history requested, total entries:', history.length);
     try {
       const exportData = {
         exportDate: new Date().toISOString(),
@@ -473,8 +522,10 @@ export default function ScanHistoryScreen() {
       };
       
       const jsonString = JSON.stringify(exportData, null, 2);
+      console.log('Export data prepared, JSON size:', jsonString.length, 'characters');
       
       if (Platform.OS === 'web') {
+        console.log('Exporting history for web platform');
         // For web, create download
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -482,30 +533,88 @@ export default function ScanHistoryScreen() {
         a.href = url;
         a.download = `safe_scan_history_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
+        console.log('Web download triggered for history export');
       } else {
+        console.log('Exporting history for mobile platform using Share API');
         // For mobile, use Share API
         await Share.share({
           message: jsonString,
           title: 'SafeScan History Export'
         });
+        console.log('Mobile share completed for history export');
       }
     } catch (error) {
+      console.error('Error exporting history:', error);
       Alert.alert('Error', 'Failed to export history');
     }
   };
 
   const clearHistory = () => {
+    console.log('Clear history requested');
     Alert.alert(
       'Clear History',
       'Are you sure you want to clear all scan history? This action cannot be undone.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => console.log('Clear history cancelled by user')
+        },
         {
           text: 'Clear All',
           style: 'destructive',
           onPress: async () => {
+            console.log('User confirmed clear all history');
+            const beforeCount = history.length;
             setHistory([]);
             await AsyncStorage.removeItem(STORAGE_KEY);
+            console.log('History cleared -', beforeCount, 'entries removed');
+          }
+        }
+      ]
+    );
+  };
+
+  const importMockScans = () => {
+    console.log('Import mock scans requested');
+    Alert.alert(
+      'Import Mock Scans',
+      'This will add sample scan data for demonstration purposes. Mock scans will be clearly labeled with a "Mock" tag.',
+      [
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => console.log('Import mock scans cancelled by user')
+        },
+        {
+          text: 'Import',
+          onPress: async () => {
+            console.log('User confirmed import mock scans');
+            try {
+              const mockData = generateMockHistory();
+              console.log('Generated mock data entries:', mockData.length);
+              
+              // Load existing history
+              const existingData = await AsyncStorage.getItem(STORAGE_KEY);
+              const existingHistory: ScanHistoryEntry[] = existingData ? JSON.parse(existingData) : [];
+              
+              // Filter out any existing mock data to avoid duplicates
+              const realScans = existingHistory.filter(entry => !entry.isMockData);
+              
+              // Combine real scans with new mock data
+              const combinedHistory = [...realScans, ...mockData];
+              combinedHistory.sort((a, b) => b.timestamp - a.timestamp);
+              
+              // Save to storage and update state
+              await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(combinedHistory));
+              setHistory(combinedHistory);
+              
+              console.log('Mock scans imported successfully, total entries:', combinedHistory.length);
+              Alert.alert('Success', `Imported ${mockData.length} mock scans for demonstration`);
+            } catch (error) {
+              console.error('Error importing mock scans:', error);
+              Alert.alert('Error', 'Failed to import mock scans');
+            }
           }
         }
       ]
@@ -513,6 +622,7 @@ export default function ScanHistoryScreen() {
   };
 
   const exportToCSV = async () => {
+    console.log('CSV export requested for', history.length, 'entries');
     try {
       const csvHeader = 'ID,QR Data,URL,Timestamp,Date,Safety Status,VirusTotal Secure,VirusTotal Positives,VirusTotal Total,Community Safe Votes,Community Unsafe Votes,Community Confidence,User Tag,Scan Duration (ms)\n';
       
@@ -542,8 +652,10 @@ export default function ScanHistoryScreen() {
       
       const csvContent = csvHeader + csvRows;
       const fileName = `safescan_history_${new Date().toISOString().split('T')[0]}.csv`;
+      console.log('CSV content prepared, size:', csvContent.length, 'characters');
       
       if (Platform.OS === 'web') {
+        console.log('Exporting CSV for web platform');
         // For web, create download
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -552,7 +664,9 @@ export default function ScanHistoryScreen() {
         a.download = fileName;
         a.click();
         URL.revokeObjectURL(url);
+        console.log('Web CSV download triggered');
       } else {
+        console.log('Exporting CSV for mobile platform');
         // For mobile, use Share API
         const result = await Share.share({
           message: csvContent,
@@ -561,11 +675,15 @@ export default function ScanHistoryScreen() {
         
         // Only show success if share was not dismissed/cancelled
         if (result.action === Share.sharedAction) {
+          console.log('Mobile CSV share completed successfully');
           Alert.alert('Success', `Exported ${history.length} scans to CSV format`);
+        } else {
+          console.log('Mobile CSV share was cancelled or dismissed');
         }
         return; // Exit early to avoid showing alert below
       }
       
+      console.log('CSV export completed successfully');
       Alert.alert('Success', `Exported ${history.length} scans to CSV format`);
     } catch (error) {
       console.error('CSV Export Error:', error);
@@ -574,6 +692,7 @@ export default function ScanHistoryScreen() {
   };
 
   const exportToJSON = async () => {
+    console.log('JSON export requested for', history.length, 'entries');
     try {
       const exportData = {
         exportDate: new Date().toISOString(),
@@ -585,8 +704,10 @@ export default function ScanHistoryScreen() {
       
       const jsonString = JSON.stringify(exportData, null, 2);
       const fileName = `safescan_history_${new Date().toISOString().split('T')[0]}.json`;
+      console.log('JSON content prepared, size:', jsonString.length, 'characters');
       
       if (Platform.OS === 'web') {
+        console.log('Exporting JSON for web platform');
         // For web, create download
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -595,7 +716,9 @@ export default function ScanHistoryScreen() {
         a.download = fileName;
         a.click();
         URL.revokeObjectURL(url);
+        console.log('Web JSON download triggered');
       } else {
+        console.log('Exporting JSON for mobile platform');
         // For mobile, use Share API
         const result = await Share.share({
           message: jsonString,
@@ -604,11 +727,15 @@ export default function ScanHistoryScreen() {
         
         // Only show success if share was not dismissed/cancelled
         if (result.action === Share.sharedAction) {
+          console.log('Mobile JSON share completed successfully');
           Alert.alert('Success', `Exported ${history.length} scans to JSON format`);
+        } else {
+          console.log('Mobile JSON share was cancelled or dismissed');
         }
         return; // Exit early to avoid showing alert below
       }
       
+      console.log('JSON export completed successfully');
       Alert.alert('Success', `Exported ${history.length} scans to JSON format`);
     } catch (error) {
       console.error('JSON Export Error:', error);
@@ -617,9 +744,11 @@ export default function ScanHistoryScreen() {
   };
 
   const getStorageInfo = async () => {
+    console.log('Storage info requested');
     try {
       const keys = await AsyncStorage.getAllKeys();
       const safeScanKeys = keys.filter(key => key.includes('safe_scan'));
+      console.log('Found storage keys:', keys.length, 'total,', safeScanKeys.length, 'SafeScan related');
       
       let totalSize = 0;
       for (const key of safeScanKeys) {
@@ -630,12 +759,14 @@ export default function ScanHistoryScreen() {
       }
       
       const sizeInKB = (totalSize / 1024).toFixed(2);
+      console.log('Storage analysis completed - Size:', sizeInKB, 'KB');
       
       Alert.alert(
         'Storage Information',
         `History Entries: ${history.length}\nStorage Keys: ${safeScanKeys.length}\nApproximate Size: ${sizeInKB} KB\n\nOldest Entry: ${history.length > 0 ? new Date(Math.min(...history.map(h => h.timestamp))).toLocaleDateString() : 'None'}\nNewest Entry: ${history.length > 0 ? new Date(Math.max(...history.map(h => h.timestamp))).toLocaleDateString() : 'None'}`
       );
     } catch (error) {
+      console.error('Error retrieving storage information:', error);
       Alert.alert('Error', 'Failed to retrieve storage information');
     }
   };
@@ -687,6 +818,7 @@ export default function ScanHistoryScreen() {
         borderWidth: 1.5
       }]}
       onPress={() => {
+        console.log('History item selected:', item.id, '- Safety status:', item.safetyStatus);
         setSelectedEntry(item);
         setShowDetails(true);
       }}
@@ -981,6 +1113,23 @@ export default function ScanHistoryScreen() {
             </View>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.settingsListItem}
+            onPress={() => {
+              importMockScans();
+            }}
+          >
+            <View style={styles.settingsItemContent}>
+              <View style={styles.settingsItemTextContainer}>
+                <ThemedText style={styles.settingsItemTitle}>Import Mock Scans</ThemedText>
+                <ThemedText style={styles.settingsItemSubtitle}>
+                  Add sample scan data for demonstration
+                </ThemedText>
+              </View>
+              <ThemedText style={styles.chevronText}>›</ThemedText>
+            </View>
+          </TouchableOpacity>
+
           {/* Privacy Section */}
           <ThemedText style={styles.settingsSectionTitle}>Privacy</ThemedText>
           
@@ -1022,12 +1171,15 @@ export default function ScanHistoryScreen() {
   );
 
   const onRefresh = async () => {
+    console.log('History refresh triggered by pull-to-refresh');
     setRefreshing(true);
     await loadHistory();
     setRefreshing(false);
+    console.log('History refresh completed');
   };
 
   if (isLoading) {
+    console.log('Displaying loading screen');
     return (
       <ThemedView style={styles.container}>
         <ThemedView style={styles.loadingContainer}>
@@ -1036,6 +1188,8 @@ export default function ScanHistoryScreen() {
       </ThemedView>
     );
   }
+
+  console.log('Rendering history screen with', filteredHistory.length, 'visible entries');
 
   return (
     <ThemedView style={styles.container}>
@@ -1051,7 +1205,10 @@ export default function ScanHistoryScreen() {
         </View>
         <TouchableOpacity 
           style={styles.settingsButton}
-          onPress={() => setShowSettings(true)}
+          onPress={() => {
+            console.log('Settings button pressed');
+            setShowSettings(true);
+          }}
         >
           <SymbolView 
             name="gear" 
@@ -1067,7 +1224,10 @@ export default function ScanHistoryScreen() {
         <View style={styles.headerActions}>
             <TouchableOpacity
               style={[styles.quickButton, { backgroundColor: 'transparent', marginRight: 8 }]}
-              onPress={() => setShowFilters(!showFilters)}
+              onPress={() => {
+                console.log('Filter toggle pressed, current state:', showFilters);
+                setShowFilters(!showFilters);
+              }}
             >
               <SymbolView
               name="line.3.horizontal.decrease.circle"
@@ -1087,7 +1247,10 @@ export default function ScanHistoryScreen() {
             placeholder="Quick search..."
             placeholderTextColor={colors.tabIconDefault}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              console.log('Search query changed to:', text);
+              setSearchQuery(text);
+            }}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -1108,7 +1271,10 @@ export default function ScanHistoryScreen() {
                     borderWidth: 1.5
                   }
                 ]}
-                onPress={() => setSelectedFilter(filter.key as any)}
+                onPress={() => {
+                  console.log('Filter selected:', filter.key);
+                  setSelectedFilter(filter.key as any);
+                }}
               >
                 <View style={styles.filterButtonContent}>
                   <SymbolView
