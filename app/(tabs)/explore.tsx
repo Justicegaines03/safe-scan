@@ -105,9 +105,17 @@ export default function ScanHistoryScreen() {
       let existingHistory: ScanHistoryEntry[] = data ? JSON.parse(data) : [];
       console.log('Loaded history entries from storage:', existingHistory.length);
       
+      /// Log each entry for debugging
+      existingHistory.forEach((entry, index) => {
+        console.log(`Entry ${index}: ID=${entry.id}, Mock=${entry.isMockData}, Safety=${entry.safetyStatus}, Type=${typeof entry.safetyStatus}`);
+      });
+      
       /// Separate real scans from mock data
       const existingMockData = existingHistory.filter(entry => entry.isMockData);
       const realScans = existingHistory.filter(entry => !entry.isMockData);
+      
+      console.log('Mock data entries:', existingMockData.length);
+      console.log('Real scan entries:', realScans.length);
       console.log('Real scan entries:', realScans.length);
       console.log('Mock data entries:', existingMockData.length);
       
@@ -451,7 +459,7 @@ export default function ScanHistoryScreen() {
       console.log('Applying search filter with query:', query);
       const beforeCount = filtered.length;
       filtered = filtered.filter(entry => 
-        entry.qrData.toLowerCase().includes(query) ||
+        getQRDataString(entry.qrData).toLowerCase().includes(query) ||
         entry.url?.toLowerCase().includes(query)
       );
       console.log('Search filter applied, entries reduced from', beforeCount, 'to', filtered.length);
@@ -647,7 +655,7 @@ export default function ScanHistoryScreen() {
           return str;
         };
         
-        return `${escapeCSV(entry.id)},${escapeCSV(entry.qrData)},${escapeCSV(url)},${entry.timestamp},${escapeCSV(date)},${escapeCSV(entry.safetyStatus)},${escapeCSV(vtSecure)},${escapeCSV(vtPositives)},${escapeCSV(vtTotal)},${escapeCSV(communitySafe)},${escapeCSV(communityUnsafe)},${escapeCSV(communityConf)},${escapeCSV(userRating)},${escapeCSV(scanDuration)}`;
+        return `${escapeCSV(entry.id)},${escapeCSV(getQRDataString(entry.qrData))},${escapeCSV(url)},${entry.timestamp},${escapeCSV(date)},${escapeCSV(entry.safetyStatus)},${escapeCSV(vtSecure)},${escapeCSV(vtPositives)},${escapeCSV(vtTotal)},${escapeCSV(communitySafe)},${escapeCSV(communityUnsafe)},${escapeCSV(communityConf)},${escapeCSV(userRating)},${escapeCSV(scanDuration)}`;
       }).join('\n');
       
       const csvContent = csvHeader + csvRows;
@@ -785,6 +793,21 @@ export default function ScanHistoryScreen() {
     return 'now';
   };
 
+  // Helper function to safely display QR data
+  const getQRDataString = (qrData: any): string => {
+    if (typeof qrData === 'string') {
+      return qrData;
+    }
+    if (typeof qrData === 'object' && qrData !== null) {
+      // If it's an object, try to extract the URL or convert to string
+      if (qrData.url) {
+        return qrData.url;
+      }
+      return JSON.stringify(qrData);
+    }
+    return 'Invalid QR Data';
+  };
+
   const truncateText = (text: string, maxLength: number = 40) => {
     // Shorter truncation for quick scanning
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
@@ -828,7 +851,10 @@ export default function ScanHistoryScreen() {
       <View style={styles.topStatusContainer}>
         <View style={styles.statusContainer}>
           <ThemedText type="title" style={[styles.statusText, { fontSize: 20}]}>
-            {item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1)}
+            {typeof item.safetyStatus === 'string' ? 
+              item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1) : 
+              'Unknown'
+            }
           </ThemedText>
           {/* Quick scan time indicator and mock tag */}
           <View style={styles.scanTimeContainer}>
@@ -852,7 +878,7 @@ export default function ScanHistoryScreen() {
       
       {/* Link/QR Data in the middle */}
       <ThemedText style={styles.qrData} numberOfLines={1}>
-        {truncateText(item.qrData, 60)}
+        {truncateText(getQRDataString(item.qrData), 60)}
       </ThemedText>
       
       {/* VirusTotal score and Community votes below the link */}
@@ -929,7 +955,7 @@ export default function ScanHistoryScreen() {
             <ThemedView style={styles.detailCard}>
               <ThemedText type="subtitle">QR Code Content</ThemedText>
               <ThemedText style={styles.qrContent} selectable>
-                {selectedEntry.qrData}
+                {getQRDataString(selectedEntry.qrData)}
               </ThemedText>
             </ThemedView>
 

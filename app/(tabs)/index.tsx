@@ -346,10 +346,10 @@ export default function CameraScannerScreen() {
     const safetyResult: SafetyAssessment = {
       virusTotal: virusTotalResult || undefined,
       community: communityRating || undefined,
-      safety: isSafe // Fix: use isSafe instead of safety
+      safety: isSafe ? 'safe' : 'unsafe' // Convert boolean to string
     };
 
-    console.log(`Final Safety Assessment: ${isSafe ? 'SAFE' : 'UNSAFE'}`); // Fix: use isSafe
+    console.log(`Final Safety Assessment: ${isSafe ? 'SAFE' : 'UNSAFE'}`);
     
     return {
       virusTotal: virusTotalResult || undefined,
@@ -429,15 +429,24 @@ export default function CameraScannerScreen() {
         return (maxId + 1).toString();
       };
       
+      // Extract safety status string from the nested safety object
+      const getSafetyStatus = (): string => {
+        if (scanData.safety?.safety) {
+          return scanData.safety.safety; // This is the string: 'safe', 'unsafe', or 'unknown'
+        }
+        return 'unknown';
+      };
+      
       const newEntry = {
         id: getNextScanId(),
         scanDuration: scanDuration,
         timestamp: scanEndTime,
-        qrData: scanData,
+        qrData: scanData.url, // Use the URL as qrData for consistency
         virusTotalResult: scanData.virusTotal, 
-        safetyStatus: !scanData.safety,
+        safetyStatus: getSafetyStatus(), // Now correctly a string
         communityRating: scanData.community, 
         url: scanData.url,
+        isMockData: false // Mark as real scan data
       };
       
       // Add to beginning of history array
@@ -447,7 +456,7 @@ export default function CameraScannerScreen() {
       const trimmedHistory = history.slice(0, 100);
       
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
-      console.log('Saved to History', newEntry)
+      console.log('Saved to History - ID:', newEntry.id, 'Safety:', newEntry.safetyStatus, 'Mock:', newEntry.isMockData);
     } catch (error) {
       console.error('Error saving to history:', error);
     }
