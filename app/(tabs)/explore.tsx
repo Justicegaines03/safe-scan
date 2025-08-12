@@ -74,6 +74,8 @@ export default function ScanHistoryScreen() {
   const [showDetails, setShowDetails] = useState(false);
   const [editingTag, setEditingTag] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showUserRating, setShowUserRating] = useState(false);
+  const [userRating, setUserRating] = useState<'safe' | 'unsafe' | null>(null);
   console.log('State variables initialized');
 
   // Reloads history every time the tab comes into focus
@@ -488,6 +490,8 @@ export default function ScanHistoryScreen() {
     setHistory(updatedHistory);
     await updateHistory(updatedHistory);
     setEditingTag(null);
+    setShowUserRating(false);
+    setSelectedEntry(null);
     console.log('User tag update completed');
   };
 
@@ -841,9 +845,10 @@ export default function ScanHistoryScreen() {
         borderWidth: 1.5
       }]}
       onPress={() => {
-        console.log('History item selected:', item.id, '- Safety status:', item.safetyStatus);
+        console.log('History item selected:', item.id, '- Opening rating interface');
         setSelectedEntry(item);
-        setShowDetails(true);
+        setUserRating(item.userRating || null);
+        setShowUserRating(true);
       }}
       activeOpacity={0.7}
     >
@@ -1022,6 +1027,96 @@ export default function ScanHistoryScreen() {
             </View>
           </ScrollView>
         </ThemedView>
+      </Modal>
+    );
+  };
+
+  const renderUserRatingModal = () => {
+    if (!selectedEntry) return null;
+
+    return (
+      <Modal
+        visible={showUserRating}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowUserRating(false);
+          setSelectedEntry(null);
+          setUserRating(null);
+        }}
+      >
+        <View style={styles.userRatingOverlay}>
+          <ThemedView style={styles.userRatingModalContent}>
+            <ThemedText type="subtitle" style={styles.userRatingModalTitle}>
+              Rate this QR code
+            </ThemedText>
+            
+            <ThemedText style={styles.qrDataPreview} numberOfLines={2}>
+              {truncateText(getQRDataString(selectedEntry.qrData), 80)}
+            </ThemedText>
+            
+            <ThemedText style={styles.userRatingInstructions}>
+              What do you think about this QR code's safety?
+            </ThemedText>
+
+            <View style={styles.ratingButtonsContainer}>
+              <TouchableOpacity 
+                style={[
+                  styles.ratingButton,
+                  styles.safeButton,
+                  userRating === 'safe' && styles.selectedButton
+                ]}
+                onPress={() => {
+                  const newRating = userRating === 'safe' ? null : 'safe';
+                  setUserRating(newRating);
+                  if (selectedEntry) {
+                    updateUserTag(selectedEntry.id, newRating);
+                  }
+                }}
+              >
+                <Text style={[
+                  styles.ratingButtonText,
+                  userRating === 'safe' && styles.selectedButtonText
+                ]}>
+                  Safe
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.ratingButton,
+                  styles.unsafeButton,
+                  userRating === 'unsafe' && styles.selectedButton
+                ]}
+                onPress={() => {
+                  const newRating = userRating === 'unsafe' ? null : 'unsafe';
+                  setUserRating(newRating);
+                  if (selectedEntry) {
+                    updateUserTag(selectedEntry.id, newRating);
+                  }
+                }}
+              >
+                <Text style={[
+                  styles.ratingButtonText,
+                  userRating === 'unsafe' && styles.selectedButtonText
+                ]}>
+                  Unsafe
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, styles.secondaryButton]}
+              onPress={() => {
+                setShowUserRating(false);
+                setSelectedEntry(null);
+                setUserRating(null);
+              }}
+            >
+              <ThemedText style={[styles.buttonText]}>Cancel</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        </View>
       </Modal>
     );
   };
@@ -1387,6 +1482,7 @@ export default function ScanHistoryScreen() {
       )}
 
       {renderDetailsModal()}
+      {renderUserRatingModal()}
       {renderTagEditModal()}
       {renderSettingsModal()}
     </ThemedView>
@@ -1712,14 +1808,13 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   buttonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   secondaryButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: '#00000',
   },
   dangerButton: {
     backgroundColor: '#F44336',
@@ -1937,6 +2032,91 @@ const styles = StyleSheet.create({
   mockTagText: {
     color: '#FFFFFF',
     fontSize: 10,
+    fontWeight: 'bold',
+  },
+  userRatingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  userRatingModalContent: {
+    width: '85%',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  userRatingModalTitle: {
+    textAlign: 'center',
+    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  qrDataPreview: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: '#333',
+  },
+  userRatingInstructions: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#666',
+    lineHeight: 20,
+  },
+  ratingButtonsContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+  },
+  ratingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    borderWidth: 2,
+    minWidth: 100,
+    justifyContent: 'center',
+  },
+  safeButton: {
+    backgroundColor: 'transparent',
+    borderColor: '#2E7D32',
+  },
+  unsafeButton: {
+    backgroundColor: 'transparent',
+    borderColor: '#C62828',
+  },
+  selectedButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderWidth: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  ratingButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  selectedButtonText: {
+    color: '#000',
     fontWeight: 'bold',
   },
 });
