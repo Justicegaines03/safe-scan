@@ -883,41 +883,46 @@ export default function ScanHistoryScreen() {
       
       {/* VirusTotal score and Community votes below the link */}
       <View style={styles.bottomScoresContainer}>
-        {item.virusTotalResult && (
-          <View style={[
-            styles.scoreCard,
-            { backgroundColor: item.virusTotalResult.positives === 0 ? '#2E7D32' : '#C62828' }
-          ]}>
-            <SymbolView
-              name="shield.checkered"
-              size={16}
-              type="monochrome"
-              tintColor="#FFFFFF"
-              fallback={<ThemedText style={styles.scoreIcon}>VT</ThemedText>}
-            />
-            <ThemedText style={styles.scoreCardText}>
-              {item.virusTotalResult.positives === 0 ? ' Clean' : ' Threat'}
-            </ThemedText>
-          </View>
-        )}
-        {item.communityRating && (
-          <View style={styles.communityCard}>
-            <SymbolView
-              name="person.3"
-              size={23}
-              type="monochrome"
-              tintColor="#000000"
-              fallback={<ThemedText style={styles.scoreIcon}>U</ThemedText>}
-            />
-            <ThemedText style={styles.communityCardText}>
-              {item.communityRating.safeVotes + item.communityRating.unsafeVotes === 0 
-                ? '  No votes yet' 
-                : item.communityRating.safeVotes === 1 
-                  ? `  ${item.communityRating.safeVotes} safe vote`
-                  : `  ${item.communityRating.safeVotes} safe votes`}
-            </ThemedText>
-          </View>
-        )}
+        {/* Always show VirusTotal section, even if no data */}
+        <View style={[
+          styles.scoreCard,
+          { 
+            backgroundColor: !item.virusTotalResult 
+              ? '#9E9E9E' // Gray for unknown/unavailable
+              : item.virusTotalResult.positives === 0 ? '#2E7D32' : '#C62828' 
+          }
+        ]}>
+          <SymbolView
+            name="shield.checkered"
+            size={16}
+            type="monochrome"
+            tintColor="#FFFFFF"
+            fallback={<ThemedText style={styles.scoreIcon}>VT</ThemedText>}
+          />
+          <ThemedText style={styles.scoreCardText}>
+            {!item.virusTotalResult 
+              ? ' Unknown' 
+              : item.virusTotalResult.positives === 0 ? ' Clean' : ' Threat'}
+          </ThemedText>
+        </View>
+        
+        {/* Always show Community rating section, even if no data */}
+        <View style={styles.communityCard}>
+          <SymbolView
+            name="person.3"
+            size={23}
+            type="monochrome"
+            tintColor="#000000"
+            fallback={<ThemedText style={styles.scoreIcon}>U</ThemedText>}
+          />
+          <ThemedText style={styles.communityCardText}>
+            {!item.communityRating || item.communityRating.safeVotes + item.communityRating.unsafeVotes === 0 
+              ? '  No votes yet' 
+              : item.communityRating.safeVotes === 1 
+                ? `  ${item.communityRating.safeVotes} safe vote`
+                : `  ${item.communityRating.safeVotes} safe votes`}
+          </ThemedText>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -959,25 +964,37 @@ export default function ScanHistoryScreen() {
               </ThemedText>
             </ThemedView>
 
-            {selectedEntry.virusTotalResult && (
-              <ThemedView style={styles.detailCard}>
-                <ThemedText type="subtitle">VirusTotal Analysis</ThemedText>
-                <ThemedText>Status: {selectedEntry.virusTotalResult.isSecure ? 'Secure' : 'Threat Detected'}</ThemedText>
-                <ThemedText>Detections: {selectedEntry.virusTotalResult.positives}/{selectedEntry.virusTotalResult.total}</ThemedText>
-                <ThemedText style={styles.linkText} selectable>
-                  Report: {selectedEntry.virusTotalResult.permalink}
-                </ThemedText>
-              </ThemedView>
-            )}
+            <ThemedView style={styles.detailCard}>
+              <ThemedText type="subtitle">VirusTotal Analysis</ThemedText>
+              {selectedEntry.virusTotalResult ? (
+                <>
+                  <ThemedText>Status: {selectedEntry.virusTotalResult.isSecure ? 'Secure' : 'Threat Detected'}</ThemedText>
+                  <ThemedText>Detections: {selectedEntry.virusTotalResult.positives}/{selectedEntry.virusTotalResult.total}</ThemedText>
+                  <ThemedText style={styles.linkText} selectable>
+                    Report: {selectedEntry.virusTotalResult.permalink}
+                  </ThemedText>
+                </>
+              ) : (
+                <ThemedText>Status: No VirusTotal data available</ThemedText>
+              )}
+            </ThemedView>
 
-            {selectedEntry.communityRating && (
-              <ThemedView style={styles.detailCard}>
-                <ThemedText type="subtitle">Community Rating</ThemedText>
-                <ThemedText>Confidence: {Math.round(selectedEntry.communityRating.confidence * 100)}%</ThemedText>
-                <ThemedText>Safe votes: {selectedEntry.communityRating.safeVotes}</ThemedText>
-                <ThemedText>Unsafe votes: {selectedEntry.communityRating.unsafeVotes}</ThemedText>
-              </ThemedView>
-            )}
+            <ThemedView style={styles.detailCard}>
+              <ThemedText type="subtitle">Community Rating</ThemedText>
+              {selectedEntry.communityRating ? (
+                <>
+                  <ThemedText>Confidence: {Math.round(selectedEntry.communityRating.confidence * 100)}%</ThemedText>
+                  <ThemedText>Safe votes: {selectedEntry.communityRating.safeVotes}</ThemedText>
+                  <ThemedText>Unsafe votes: {selectedEntry.communityRating.unsafeVotes}</ThemedText>
+                </>
+              ) : (
+                <>
+                  <ThemedText>Confidence: No community data available</ThemedText>
+                  <ThemedText>Safe votes: 0</ThemedText>
+                  <ThemedText>Unsafe votes: 0</ThemedText>
+                </>
+              )}
+            </ThemedView>
 
             <ThemedView style={styles.detailCard}>
               <ThemedText type="subtitle">User Tag</ThemedText>
