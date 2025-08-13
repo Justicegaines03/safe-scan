@@ -261,7 +261,7 @@ export default function ScanHistoryScreen() {
         id: '5',
         qrData: 'BEGIN:VCARD\nVERSION:3.0\nFN:John Smith\nORG:Tech Corp\nTEL:+1-555-123-4567\nEMAIL:john@techcorp.com\nEND:VCARD',
         timestamp: now - 14400000, // 4 hours ago
-        safetyStatus: 'unknown',
+        safetyStatus: 'safe', // Based on community confidence 0.8 > 0.7 threshold
         communityRating: {
           confidence: 0.8,
           safeVotes: 8,
@@ -377,7 +377,7 @@ export default function ScanHistoryScreen() {
         id: '11',
         qrData: 'WIFI:T:WPA2;S:HomeNetwork5G;P:supersecurepassword2023;H:true;;',
         timestamp: now - 345600000, // 4 days ago
-        safetyStatus: 'unknown',
+        safetyStatus: 'safe', // Based on community confidence 0.7 >= 0.7 threshold
         communityRating: {
           confidence: 0.7,
           safeVotes: 5,
@@ -449,7 +449,7 @@ export default function ScanHistoryScreen() {
         id: '15',
         qrData: 'Event: Team Meeting\nDate: 2024-01-15\nTime: 2:00 PM\nLocation: Conference Room A\nNotes: Bring laptop and quarterly reports',
         timestamp: now - 691200000, // 8 days ago
-        safetyStatus: 'unknown',
+        safetyStatus: 'safe', // Based on community confidence 0.9 > 0.7 threshold
         communityRating: {
           confidence: 0.9,
           safeVotes: 12,
@@ -636,10 +636,38 @@ export default function ScanHistoryScreen() {
     
     // Find the entry to get its URL for community voting
     const entryToUpdate = history.find(entry => entry.id === entryId);
+    if (!entryToUpdate) return;
+
+    // Handle community voting first for mock scans when reverting, so we can calculate proper safety assessment
+    let updatedCommunityRating = entryToUpdate.communityRating;
     
+    if (newTag === null && entryToUpdate.isMockData && entryToUpdate.communityRating && entryToUpdate.userRating) {
+      // For mock scans when reverting, update community data first
+      console.log('Pre-calculating mock scan community data for proper safety assessment');
+      const currentUserRating = entryToUpdate.userRating;
+      const currentCommunityRating = entryToUpdate.communityRating;
+      
+      const newSafeVotes = Math.max(0, currentCommunityRating.safeVotes - (currentUserRating === 'safe' ? 1 : 0));
+      const newUnsafeVotes = Math.max(0, currentCommunityRating.unsafeVotes - (currentUserRating === 'unsafe' ? 1 : 0));
+      const totalVotes = newSafeVotes + newUnsafeVotes;
+      const newConfidence = totalVotes > 0 ? newSafeVotes / totalVotes : 0.5;
+      
+      updatedCommunityRating = {
+        confidence: newConfidence,
+        safeVotes: newSafeVotes,
+        unsafeVotes: newUnsafeVotes
+      };
+      console.log('Pre-calculated community rating for revert - Safe votes:', newSafeVotes, 'Unsafe votes:', newUnsafeVotes, 'Confidence:', newConfidence);
+    }
+
     const updatedHistory = history.map(entry => {
       if (entry.id === entryId) {
         const updatedEntry = { ...entry, userRating: newTag };
+        
+        // If reverting a mock scan, use the pre-calculated community data for safety assessment
+        if (newTag === null && entryToUpdate.isMockData) {
+          updatedEntry.communityRating = updatedCommunityRating;
+        }
         
         // If user provided a rating, override the safety status
         if (newTag) {
@@ -647,8 +675,8 @@ export default function ScanHistoryScreen() {
           updatedEntry.userOverride = true;
           console.log('User override applied - safety status changed to:', newTag);
         } else {
-          // If user removed their rating, revert to app security assessment
-          updatedEntry.safetyStatus = calculateAppSecurityAssessment(entry);
+          // If user removed their rating, revert to app security assessment using updated data
+          updatedEntry.safetyStatus = calculateAppSecurityAssessment(updatedEntry);
           updatedEntry.userOverride = false;
           console.log('User override removed - reverted to app assessment:', updatedEntry.safetyStatus);
         }
@@ -670,10 +698,10 @@ export default function ScanHistoryScreen() {
     setHistory(updatedHistory);
     await updateHistory(updatedHistory);
     
-    // Handle community voting - special behavior for mock scans
+    // Handle remaining community voting - special behavior for mock scans
     if (newTag && entryToUpdate && (entryToUpdate.url || entryToUpdate.qrData)) {
       if (entryToUpdate.isMockData) {
-        // For mock scans, add user vote to existing mock community data
+        // For mock scans when adding rating, add user vote to existing mock community data
         console.log('Processing mock scan user vote - adding to existing community data');
         const currentCommunityRating = entryToUpdate.communityRating;
         
@@ -719,54 +747,26 @@ export default function ScanHistoryScreen() {
           console.log('Real scan community rating updated in history entry');
         }
       }
-    } else if (newTag === null && entryToUpdate && (entryToUpdate.url || entryToUpdate.qrData)) {
-      if (entryToUpdate.isMockData) {
-        // For mock scans, remove user vote from existing mock community data
-        console.log('Processing mock scan user vote removal - subtracting from existing community data');
-        const currentCommunityRating = entryToUpdate.communityRating;
-        const currentUserRating = entryToUpdate.userRating;
-        
-        if (currentCommunityRating && currentUserRating) {
-          const newSafeVotes = Math.max(0, currentCommunityRating.safeVotes - (currentUserRating === 'safe' ? 1 : 0));
-          const newUnsafeVotes = Math.max(0, currentCommunityRating.unsafeVotes - (currentUserRating === 'unsafe' ? 1 : 0));
-          const totalVotes = newSafeVotes + newUnsafeVotes;
-          const newConfidence = totalVotes > 0 ? newSafeVotes / totalVotes : 0.5;
-          
-          const finalUpdatedHistory = updatedHistory.map(entry => 
-            entry.id === entryId ? { 
-              ...entry, 
-              communityRating: {
-                confidence: newConfidence,
-                safeVotes: newSafeVotes,
-                unsafeVotes: newUnsafeVotes
-              }
-            } : entry
-          );
-          setHistory(finalUpdatedHistory);
-          await updateHistory(finalUpdatedHistory);
-          console.log('Mock scan community rating updated after vote removal - Safe votes:', newSafeVotes, 'Unsafe votes:', newUnsafeVotes, 'Confidence:', newConfidence);
-        }
-      } else {
-        // For real scans, use normal backend community vote retraction
-        const urlToUse = entryToUpdate.url || entryToUpdate.qrData;
-        const result = await retractCommunityVote(urlToUse);
-        
-        // Update the entry with new community data if retraction was successful
-        if (result.success && result.data) {
-          const finalUpdatedHistory = updatedHistory.map(entry => 
-            entry.id === entryId ? { 
-              ...entry, 
-              communityRating: {
-                confidence: result.data!.confidence,
-                safeVotes: result.data!.safeVotes,
-                unsafeVotes: result.data!.unsafeVotes
-              }
-            } : entry
-          );
-          setHistory(finalUpdatedHistory);
-          await updateHistory(finalUpdatedHistory);
-          console.log('Real scan community rating updated after vote retraction in history entry');
-        }
+    } else if (newTag === null && entryToUpdate && (entryToUpdate.url || entryToUpdate.qrData) && !entryToUpdate.isMockData) {
+      // Only handle real scan vote retraction here (mock scan retraction was handled above)
+      const urlToUse = entryToUpdate.url || entryToUpdate.qrData;
+      const result = await retractCommunityVote(urlToUse);
+      
+      // Update the entry with new community data if retraction was successful
+      if (result.success && result.data) {
+        const finalUpdatedHistory = updatedHistory.map(entry => 
+          entry.id === entryId ? { 
+            ...entry, 
+            communityRating: {
+              confidence: result.data!.confidence,
+              safeVotes: result.data!.safeVotes,
+              unsafeVotes: result.data!.unsafeVotes
+            }
+          } : entry
+        );
+        setHistory(finalUpdatedHistory);
+        await updateHistory(finalUpdatedHistory);
+        console.log('Real scan community rating updated after vote retraction in history entry');
       }
     }
     
@@ -1511,7 +1511,7 @@ export default function ScanHistoryScreen() {
               styles.scoreCard,
               { 
                 backgroundColor: !item.virusTotalResult 
-                  ? '#9E9E9E' // Gray for unknown/unavailable
+                  ? '#FFA726' // Orange for unknown/unavailable
                   : item.virusTotalResult.positives === 0 ? '#2E7D32' : '#C62828' 
               }
             ]}>
@@ -1524,7 +1524,7 @@ export default function ScanHistoryScreen() {
               />
               <ThemedText style={styles.scoreCardText}>
                 {!item.virusTotalResult 
-                  ? ' Unknown' 
+                  ? ' Warning' 
                   : item.virusTotalResult.positives === 0 ? ' Clean' : ' Threat'}
               </ThemedText>
             </View>
@@ -2137,45 +2137,37 @@ export default function ScanHistoryScreen() {
           />
           <View style={styles.quickFilters}>
             {[
-              { key: 'all', label: 'All', symbol: 'list.bullet' as const },
-              { key: 'safe', label: 'Safe', symbol: 'checkmark.shield.fill' as const },
-              { key: 'unsafe', label: 'Unsafe', symbol: 'xmark.shield.fill' as const },
-              { key: 'unknown', label: 'Unknown', symbol: 'questionmark.circle.fill' as const }
+              { key: 'all', label: 'All' },
+              { key: 'safe', label: 'Safe' },
+              { key: 'unsafe', label: 'Unsafe' },
+              { key: 'unknown', label: 'Unknown' }
             ].map((filter) => (
               <TouchableOpacity
-                key={filter.key}
-                style={[
-                  styles.quickFilterButton,
-                  { 
-                    backgroundColor: selectedFilter === filter.key ? getStatusColor(filter.key === 'all' ? 'safe' : filter.key) : 'transparent',
-                    borderColor: getStatusColor(filter.key === 'all' ? 'safe' : filter.key),
-                    borderWidth: 1.5
-                  }
-                ]}
-                onPress={() => {
-                  console.log('Filter selected:', filter.key);
-                  setSelectedFilter(filter.key as any);
-                }}
+              key={filter.key}
+              style={[
+              styles.quickFilterButton,
+              { 
+              backgroundColor: selectedFilter === filter.key ? 
+                (filter.key === 'all' ? '#000000' : getStatusColor(filter.key)) : 
+                'transparent',
+              borderColor: filter.key === 'all' ? '#000000' : getStatusColor(filter.key),
+              borderWidth: 1.5
+              }
+              ]}
+              onPress={() => {
+              console.log('Filter selected:', filter.key);
+              setSelectedFilter(filter.key as any);
+              }}
               >
-                <View style={styles.filterButtonContent}>
-                  <SymbolView
-                    name={filter.symbol}
-                    size={16}
-                    type="hierarchical"
-                    tintColor={selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key)}
-                    fallback={
-                    <ThemedText style={{ color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }}>
-                        {filter.label}
-                      </ThemedText>
-                    }
-                  />
-                  <ThemedText style={[
-                    styles.quickFilterText,
-                    { color: selectedFilter === filter.key ? '#fff' : getStatusColor(filter.key === 'all' ? 'safe' : filter.key) }
-                  ]}>
-                    {filter.label}
-                  </ThemedText>
-                </View>
+              <ThemedText style={[
+              styles.quickFilterText,
+              { color: selectedFilter === filter.key ? 
+                '#fff' : 
+                (filter.key === 'all' ? '#000000' : getStatusColor(filter.key))
+              }
+              ]}>
+              {filter.label}
+              </ThemedText>
               </TouchableOpacity>
             ))}
           </View>

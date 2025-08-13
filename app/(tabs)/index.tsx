@@ -1155,7 +1155,7 @@ export default function CameraScannerScreen() {
                     ]}>
                     {validationResult.virusTotal 
                       ? (validationResult.virusTotal.positives === 0 ? ' Clean' : ' Threat')
-                      : ' Unknown'
+                      : ' Warning'
                     } 
                     </ThemedText>
                 </ThemedView>
