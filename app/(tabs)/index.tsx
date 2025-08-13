@@ -101,6 +101,7 @@ export default function CameraScannerScreen() {
   const [scanCount, setScanCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
+  const [isTabFocused, setIsTabFocused] = useState(true); // Track if this tab is focused
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
   const isProcessing = useRef(false); // Immediate flag to prevent duplicate processing
   const isShowingDuplicateAlert = useRef(false); // Prevent multiple duplicate alerts
@@ -117,6 +118,7 @@ export default function CameraScannerScreen() {
   useFocusEffect(
     useCallback(() => {
       console.log('Scanner tab focused - checking for reset signal...');
+      setIsTabFocused(true); // Mark tab as focused
       
       const checkForResetSignal = async () => {
         try {
@@ -152,6 +154,12 @@ export default function CameraScannerScreen() {
       };
 
       checkForResetSignal();
+      
+      // Return cleanup function to handle when tab loses focus
+      return () => {
+        console.log('Scanner tab lost focus - disabling camera scanning');
+        setIsTabFocused(false); // Mark tab as not focused
+      };
     }, [isScanning, validationResult, showUserRating, userRating, isValidating])
   );
 
@@ -460,6 +468,12 @@ export default function CameraScannerScreen() {
     if (!data || data.trim().length === 0) {
       Alert.alert('Error', 'Empty QR code detected');
       setIsScanning(true);
+      return;
+    }
+
+    /// Prevent scanning when tab is not focused
+    if (!isTabFocused) {
+      console.log('Scanner tab not focused, ignoring QR code scan');
       return;
     }
 
@@ -799,7 +813,7 @@ export default function CameraScannerScreen() {
     setValidationResult(null);
     setUserRating(null);
     setShowUserRating(false);
-    setIsScanning(true);
+    setIsScanning(isTabFocused); // Only enable scanning if tab is focused
     isProcessing.current = false; // Reset processing flag
     isShowingDuplicateAlert.current = false; // Reset duplicate alert flag
   };
@@ -1468,7 +1482,7 @@ export default function CameraScannerScreen() {
           <CameraView
             style={styles.camera}
             facing={cameraType}
-            onBarcodeScanned={isScanning ? handleQRCodeScanned : undefined}
+            onBarcodeScanned={isScanning && isTabFocused ? handleQRCodeScanned : undefined}
             barcodeScannerSettings={{
               barcodeTypes: ['qr'],
             }}
