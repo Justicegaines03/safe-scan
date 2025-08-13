@@ -1319,36 +1319,39 @@ export default function ScanHistoryScreen() {
 
     return (
       <View style={styles.historyItemWrapper}>
-        <View
+        {/* Selection circle positioned in the left margin when in select mode */}
+        {isSelectMode && (
+          <TouchableOpacity 
+            style={styles.selectionCircleContainer}
+            onPress={handlePress}
+            activeOpacity={0.7}
+          >
+            <View style={[
+              styles.selectionCircle,
+              { backgroundColor: isSelected ? '#007AFF' : 'transparent' }
+            ]}>
+              {isSelected && (
+                <ThemedText style={styles.checkmark}>✓</ThemedText>
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+        
+        <TouchableOpacity
           style={[
             styles.historyItem, 
             { 
-              backgroundColor: colors.background, 
-              borderColor: isSelected ? '#007AFF' : getStatusColor(item.safetyStatus, item.userOverride),
-              borderWidth: isSelected ? 3 : (item.userOverride ? 3 : 1.5), // Thicker border for user overrides
-              opacity: isSelectMode && !isSelected ? 0.6 : 1
+              backgroundColor: isSelected ? '#d4d4d4' : colors.background, 
+              borderColor: getStatusColor(item.safetyStatus, item.userOverride), // Always use safety status color
+              borderWidth: isSelected ? 1.5 : (item.userOverride ? 3 : 1.5), // Normal border when selected, thicker for user overrides when not selected
+              opacity: isSelectMode && !isSelected ? 0.6 : 1,
+              marginRight: isSelectMode ? -16 : 0, // Extend to right edge in select mode
+              marginLeft: isSelectMode ? 30 : 0, // Create space for circle in select mode
             }
           ]}
+          onPress={handlePress}
+          activeOpacity={0.7}
         >
-          {/* Selection indicator - make it clickable in select mode */}
-          {isSelectMode && (
-            <TouchableOpacity 
-              style={styles.selectionIndicatorTouchable}
-              onPress={handlePress}
-              activeOpacity={0.7}
-            >
-              <View style={styles.selectionIndicator}>
-                <View style={[
-                  styles.selectionCircle,
-                  { backgroundColor: isSelected ? '#007AFF' : 'transparent' }
-                ]}>
-                  {isSelected && (
-                    <ThemedText style={styles.checkmark}>✓</ThemedText>
-                  )}
-                </View>
-              </View>
-            </TouchableOpacity>
-          )}
 
           {/* Safety status at the top */}
           <View style={styles.topStatusContainer}>
@@ -1384,7 +1387,11 @@ export default function ScanHistoryScreen() {
           </View>
           
           {/* Link/QR Data in the middle */}
-          <ThemedText style={[styles.qrData, showButtons && { paddingRight: 140 }]} numberOfLines={1}>
+          <ThemedText style={[
+            styles.qrData, 
+            showButtons && { paddingRight: 140 },
+            !showButtons && { paddingRight: 16 } // Normal padding when no buttons
+          ]} numberOfLines={1}>
             {truncateText(getQRDataString(item.qrData), showButtons ? 40 : 60)}
           </ThemedText>
           
@@ -1441,7 +1448,7 @@ export default function ScanHistoryScreen() {
               </ThemedText>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Action Buttons - Rate and Open */}
         {(() => {
@@ -2265,6 +2272,7 @@ const styles = StyleSheet.create({
   historyItemWrapper: {
     position: 'relative',
     marginBottom: 8,
+    paddingLeft: 0, // No default left padding, will be added when in select mode
   },
   historyActionButton: {
     right: 16,
@@ -2771,11 +2779,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  selectionIndicator: {
+  selectionCircleContainer: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    zIndex: 1,
+    left: -5, // Centered in the 30px left margin (15px center - 12px radius = 3px)
+    top: 0, // Start from the top of the history item
+    bottom: 0, // Extend to the bottom of the history item
+    width: 30, // Cover the full width of the left margin space
+    justifyContent: 'center', // Center the circle vertically
+    alignItems: 'center', // Center the circle horizontally
+    zIndex: 2,
   },
   selectionCircle: {
     width: 24,
@@ -2785,18 +2797,16 @@ const styles = StyleSheet.create({
     borderColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   checkmark: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  selectionIndicatorTouchable: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    zIndex: 2,
-    padding: 4, // Increase touch area
   },
   historyActionButtonsContainer: {
     position: 'absolute',
