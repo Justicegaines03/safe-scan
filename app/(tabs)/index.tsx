@@ -105,6 +105,7 @@ export default function CameraScannerScreen() {
   const [isTabFocused, setIsTabFocused] = useState(true); // Track if this tab is focused
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
   const isProcessing = useRef(false); // Immediate flag to prevent duplicate processing
+  const isSaving = useRef(false); // Immediate flag to prevent duplicate saves
   const isShowingDuplicateAlert = useRef(false); // Prevent multiple duplicate alerts
 
   const colors = Colors[colorScheme ?? 'light'];
@@ -565,17 +566,41 @@ export default function CameraScannerScreen() {
 
   // Save the scan to the History tab
   const saveToHistory = async (scanData: ValidationResult, scanStartTime: number) => {
+    // Prevent concurrent save operations
+    if (isSaving.current) {
+      console.log('Already saving to history, skipping duplicate save operation');
+      return;
+    }
+
     try {
+      isSaving.current = true;
+      
       const STORAGE_KEY = '@safe_scan_history';
       const existingHistory = await AsyncStorage.getItem(STORAGE_KEY);
-      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      const currentHistory = existingHistory ? JSON.parse(existingHistory) : [];
+      
+      // Double-check for duplicates at save time to prevent race conditions
+      const validatedUrl = validateHTTP(scanData.url);
+      const urlForProcessing = validatedUrl || scanData.url;
+      
+      const hasDuplicate = currentHistory.some((entry: any) => {
+        return entry.qrData === urlForProcessing || 
+               entry.url === urlForProcessing ||
+               entry.qrData === scanData.url ||
+               entry.url === scanData.url;
+      });
+      
+      if (hasDuplicate) {
+        console.log('Duplicate entry detected at save time, skipping save:', scanData.url);
+        return;
+      }
       
       const scanEndTime = Date.now();
       const scanDuration = scanEndTime - scanStartTime;
       
       // Generate ID starting from 16 to avoid conflict with mock data (IDs 1-15)
       const getNextScanId = () => {
-        const realScans = history.filter((entry: any) => !entry.isMockData);
+        const realScans = currentHistory.filter((entry: any) => !entry.isMockData);
         const existingIds = realScans.map((entry: any) => parseInt(entry.id)).filter((id: number) => !isNaN(id));
         const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 15;
         return (maxId + 1).toString();
@@ -608,15 +633,17 @@ export default function CameraScannerScreen() {
       };
       
       // Add to beginning of history array
-      history.unshift(newEntry);
+      currentHistory.unshift(newEntry);
       
       // Keep only last 100 entries to prevent storage overflow
-      const trimmedHistory = history.slice(0, 100);
+      const trimmedHistory = currentHistory.slice(0, 100);
       
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
       console.log('Saved to History - ID:', newEntry.id, 'Safety:', newEntry.safetyStatus, 'User Rating:', newEntry.userRating, 'User Override:', newEntry.userOverride, 'Mock:', newEntry.isMockData);
     } catch (error) {
       console.error('Error saving to history:', error);
+    } finally {
+      isSaving.current = false;
     }
   };
 
@@ -816,6 +843,7 @@ export default function CameraScannerScreen() {
     setShowUserRating(false);
     setIsScanning(isTabFocused); // Only enable scanning if tab is focused
     isProcessing.current = false; // Reset processing flag
+    isSaving.current = false; // Reset saving flag
     isShowingDuplicateAlert.current = false; // Reset duplicate alert flag
   };
 
