@@ -2079,20 +2079,30 @@ export default function ScanHistoryScreen() {
         />
       )}
 
-      {/* Bulk action buttons - only show when in select mode and have selections */}
-      {isSelectMode && selectedEntries.size > 0 && (
+      {/* Bulk action buttons - show when in select mode, positioned above the tab bar */}
+      {isSelectMode && (
         <View style={styles.bulkActionContainer}>
           <TouchableOpacity
-            style={styles.bulkActionButton}
+            style={[styles.bulkActionButton, { marginLeft: '16.67%' }]} // Position at 1/3 from left
             onPress={handleBulkRate}
           >
-            <ThemedText style={styles.bulkActionText}>Rate</ThemedText>
+            <ThemedText style={[
+              styles.bulkActionText, 
+              { color: selectedEntries.size > 0 ? '#007AFF' : '#999999' }
+            ]}>
+              Rate
+            </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.bulkActionButton, styles.deleteActionButton]}
+            style={[styles.bulkActionButton, { marginRight: '16.67%' }]} // Position at 2/3 from left (1/3 from right)
             onPress={handleBulkDelete}
           >
-            <ThemedText style={[styles.bulkActionText, styles.deleteActionText]}>Trash</ThemedText>
+            <ThemedText style={[
+              styles.bulkActionText, 
+              { color: selectedEntries.size > 0 ? '#007AFF' : '#999999' }
+            ]}>
+              Trash
+            </ThemedText>
           </TouchableOpacity>
         </View>
       )}
@@ -2820,41 +2830,35 @@ const styles = StyleSheet.create({
   },
   bulkActionContainer: {
     position: 'absolute',
-    bottom: 90, // Moved up to be above the tab bar (typically 80-90px height)
+    bottom: 90, // Positioned above the tab bar
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8f9fa', // Same color as tab background
+    bottom: 83, // Positioned to touch the tab bar (reduced from 90)
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
-    borderRadius: 12,
-    marginHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
   },
   bulkActionButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#007AFF',
-    marginHorizontal: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#D3D3D3', // Same background as Select and Filter buttons
     justifyContent: 'center',
     alignItems: 'center',
   },
   deleteActionButton: {
-    backgroundColor: '#FF3B30',
+    // Remove separate styling - now handled by text color
   },
   bulkActionText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14, // Same font size as Select and Filter buttons
+    fontWeight: '600', // Same font weight as Select and Filter buttons
   },
   deleteActionText: {
-    color: '#FFFFFF',
+    // Remove separate styling - now handled by text color
   },
 });
