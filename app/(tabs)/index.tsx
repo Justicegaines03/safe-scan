@@ -101,6 +101,7 @@ export default function CameraScannerScreen() {
   const [showManualInput, setShowManualInput] = useState(false);
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
   const isProcessing = useRef(false); // Immediate flag to prevent duplicate processing
+  const isShowingDuplicateAlert = useRef(false); // Prevent multiple duplicate alerts
 
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -385,6 +386,30 @@ export default function CameraScannerScreen() {
     };
   };  
 
+  // Check if QR code already exists in scan history
+  // This prevents duplicate processing and preserves existing user ratings
+  const checkForDuplicateQR = async (qrData: string): Promise<boolean> => {
+    try {
+      const STORAGE_KEY = '@safe_scan_history';
+      const existingHistory = await AsyncStorage.getItem(STORAGE_KEY);
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      
+      const validatedUrl = validateHTTP(qrData);
+      const urlForProcessing = validatedUrl || qrData;
+      
+      return history.some((entry: any) => {
+        // Compare both qrData and url fields to catch different storage formats
+        return entry.qrData === urlForProcessing || 
+               entry.url === urlForProcessing ||
+               entry.qrData === qrData ||
+               entry.url === qrData;
+      });
+    } catch (error) {
+      console.error('Error checking for duplicate QR codes:', error);
+      return false; // If check fails, allow processing to continue
+    }
+  };
+
   // Display the Results Overlay
   const handleQRCodeScanned = async ({ data }: { data: string }) => {
     /// Handle empty or null data
@@ -405,6 +430,36 @@ export default function CameraScannerScreen() {
     if (isProcessing.current) {
       console.log('Already processing a scan, ignoring duplicate');
       return;
+    }
+
+    /// Check for duplicate QR codes in history BEFORE processing
+    const isDuplicate = await checkForDuplicateQR(data);
+    if (isDuplicate) {
+      console.log('Duplicate QR code detected, skipping processing:', data);
+      
+      // Set lastScanTime to trigger cooldown and prevent immediate re-scanning
+      setLastScanTime(now);
+      
+      // Prevent multiple duplicate alerts from showing
+      if (!isShowingDuplicateAlert.current) {
+        isShowingDuplicateAlert.current = true;
+        
+        Alert.alert(
+          'Already Scanned', 
+          'This QR code has already been scanned and is in your history.',
+          [{ 
+            text: 'OK',
+            onPress: () => {
+              isShowingDuplicateAlert.current = false;
+              // Re-enable scanning after user dismisses the alert
+              setTimeout(() => {
+                setIsScanning(true);
+              }, 500); // Small delay to ensure user has moved the camera
+            }
+          }]
+        );
+      }
+      return; // Exit early, don't process
     }
 
     const scanStartTime = now;
@@ -575,6 +630,7 @@ export default function CameraScannerScreen() {
     setShowUserRating(false);
     setIsScanning(true);
     isProcessing.current = false; // Reset processing flag
+    isShowingDuplicateAlert.current = false; // Reset duplicate alert flag
   };
 
   // Toggles camera back and front
