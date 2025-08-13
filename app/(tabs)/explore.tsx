@@ -670,47 +670,103 @@ export default function ScanHistoryScreen() {
     setHistory(updatedHistory);
     await updateHistory(updatedHistory);
     
-    // Submit to community database if rating is not null and we have a URL
+    // Handle community voting - special behavior for mock scans
     if (newTag && entryToUpdate && (entryToUpdate.url || entryToUpdate.qrData)) {
-      const urlToUse = entryToUpdate.url || entryToUpdate.qrData;
-      const result = await submitCommunityVote(urlToUse, newTag);
-      
-      // Update the entry with new community data if vote was successful
-      if (result.success && result.data) {
-        const finalUpdatedHistory = updatedHistory.map(entry => 
-          entry.id === entryId ? { 
-            ...entry, 
-            communityRating: {
-              confidence: result.data!.confidence,
-              safeVotes: result.data!.safeVotes,
-              unsafeVotes: result.data!.unsafeVotes
-            }
-          } : entry
-        );
-        setHistory(finalUpdatedHistory);
-        await updateHistory(finalUpdatedHistory);
-        console.log('Community rating updated in history entry');
+      if (entryToUpdate.isMockData) {
+        // For mock scans, add user vote to existing mock community data
+        console.log('Processing mock scan user vote - adding to existing community data');
+        const currentCommunityRating = entryToUpdate.communityRating;
+        
+        if (currentCommunityRating) {
+          const newSafeVotes = currentCommunityRating.safeVotes + (newTag === 'safe' ? 1 : 0);
+          const newUnsafeVotes = currentCommunityRating.unsafeVotes + (newTag === 'unsafe' ? 1 : 0);
+          const totalVotes = newSafeVotes + newUnsafeVotes;
+          const newConfidence = totalVotes > 0 ? newSafeVotes / totalVotes : 0.5;
+          
+          const finalUpdatedHistory = updatedHistory.map(entry => 
+            entry.id === entryId ? { 
+              ...entry, 
+              communityRating: {
+                confidence: newConfidence,
+                safeVotes: newSafeVotes,
+                unsafeVotes: newUnsafeVotes
+              }
+            } : entry
+          );
+          setHistory(finalUpdatedHistory);
+          await updateHistory(finalUpdatedHistory);
+          console.log('Mock scan community rating updated - Safe votes:', newSafeVotes, 'Unsafe votes:', newUnsafeVotes, 'Confidence:', newConfidence);
+        }
+      } else {
+        // For real scans, use normal backend community voting
+        const urlToUse = entryToUpdate.url || entryToUpdate.qrData;
+        const result = await submitCommunityVote(urlToUse, newTag);
+        
+        // Update the entry with new community data if vote was successful
+        if (result.success && result.data) {
+          const finalUpdatedHistory = updatedHistory.map(entry => 
+            entry.id === entryId ? { 
+              ...entry, 
+              communityRating: {
+                confidence: result.data!.confidence,
+                safeVotes: result.data!.safeVotes,
+                unsafeVotes: result.data!.unsafeVotes
+              }
+            } : entry
+          );
+          setHistory(finalUpdatedHistory);
+          await updateHistory(finalUpdatedHistory);
+          console.log('Real scan community rating updated in history entry');
+        }
       }
     } else if (newTag === null && entryToUpdate && (entryToUpdate.url || entryToUpdate.qrData)) {
-      // User is removing their rating - retract from community database
-      const urlToUse = entryToUpdate.url || entryToUpdate.qrData;
-      const result = await retractCommunityVote(urlToUse);
-      
-      // Update the entry with new community data if retraction was successful
-      if (result.success && result.data) {
-        const finalUpdatedHistory = updatedHistory.map(entry => 
-          entry.id === entryId ? { 
-            ...entry, 
-            communityRating: {
-              confidence: result.data!.confidence,
-              safeVotes: result.data!.safeVotes,
-              unsafeVotes: result.data!.unsafeVotes
-            }
-          } : entry
-        );
-        setHistory(finalUpdatedHistory);
-        await updateHistory(finalUpdatedHistory);
-        console.log('Community rating updated after vote retraction in history entry');
+      if (entryToUpdate.isMockData) {
+        // For mock scans, remove user vote from existing mock community data
+        console.log('Processing mock scan user vote removal - subtracting from existing community data');
+        const currentCommunityRating = entryToUpdate.communityRating;
+        const currentUserRating = entryToUpdate.userRating;
+        
+        if (currentCommunityRating && currentUserRating) {
+          const newSafeVotes = Math.max(0, currentCommunityRating.safeVotes - (currentUserRating === 'safe' ? 1 : 0));
+          const newUnsafeVotes = Math.max(0, currentCommunityRating.unsafeVotes - (currentUserRating === 'unsafe' ? 1 : 0));
+          const totalVotes = newSafeVotes + newUnsafeVotes;
+          const newConfidence = totalVotes > 0 ? newSafeVotes / totalVotes : 0.5;
+          
+          const finalUpdatedHistory = updatedHistory.map(entry => 
+            entry.id === entryId ? { 
+              ...entry, 
+              communityRating: {
+                confidence: newConfidence,
+                safeVotes: newSafeVotes,
+                unsafeVotes: newUnsafeVotes
+              }
+            } : entry
+          );
+          setHistory(finalUpdatedHistory);
+          await updateHistory(finalUpdatedHistory);
+          console.log('Mock scan community rating updated after vote removal - Safe votes:', newSafeVotes, 'Unsafe votes:', newUnsafeVotes, 'Confidence:', newConfidence);
+        }
+      } else {
+        // For real scans, use normal backend community vote retraction
+        const urlToUse = entryToUpdate.url || entryToUpdate.qrData;
+        const result = await retractCommunityVote(urlToUse);
+        
+        // Update the entry with new community data if retraction was successful
+        if (result.success && result.data) {
+          const finalUpdatedHistory = updatedHistory.map(entry => 
+            entry.id === entryId ? { 
+              ...entry, 
+              communityRating: {
+                confidence: result.data!.confidence,
+                safeVotes: result.data!.safeVotes,
+                unsafeVotes: result.data!.unsafeVotes
+              }
+            } : entry
+          );
+          setHistory(finalUpdatedHistory);
+          await updateHistory(finalUpdatedHistory);
+          console.log('Real scan community rating updated after vote retraction in history entry');
+        }
       }
     }
     
@@ -751,25 +807,51 @@ export default function ScanHistoryScreen() {
     setHistory(updatedHistory);
     await updateHistory(updatedHistory);
     
-    // Submit community votes if rating is not null
+    // Handle community voting for bulk updates - special behavior for mock scans
     if (newTag) {
       for (const entry of entriesToUpdate) {
         if (entry.url || entry.qrData) {
-          const urlToUse = entry.url || entry.qrData;
-          const result = await submitCommunityVote(urlToUse, newTag);
-          
-          // Update the entry with new community data if vote was successful
-          if (result.success && result.data) {
-            updatedHistory = updatedHistory.map(historyEntry => 
-              historyEntry.id === entry.id ? { 
-                ...historyEntry, 
-                communityRating: {
-                  confidence: result.data!.confidence,
-                  safeVotes: result.data!.safeVotes,
-                  unsafeVotes: result.data!.unsafeVotes
-                }
-              } : historyEntry
-            );
+          if (entry.isMockData) {
+            // For mock scans, add user vote to existing mock community data
+            console.log('Processing bulk mock scan user vote for entry', entry.id, '- adding to existing community data');
+            const currentCommunityRating = entry.communityRating;
+            
+            if (currentCommunityRating) {
+              const newSafeVotes = currentCommunityRating.safeVotes + (newTag === 'safe' ? 1 : 0);
+              const newUnsafeVotes = currentCommunityRating.unsafeVotes + (newTag === 'unsafe' ? 1 : 0);
+              const totalVotes = newSafeVotes + newUnsafeVotes;
+              const newConfidence = totalVotes > 0 ? newSafeVotes / totalVotes : 0.5;
+              
+              updatedHistory = updatedHistory.map(historyEntry => 
+                historyEntry.id === entry.id ? { 
+                  ...historyEntry, 
+                  communityRating: {
+                    confidence: newConfidence,
+                    safeVotes: newSafeVotes,
+                    unsafeVotes: newUnsafeVotes
+                  }
+                } : historyEntry
+              );
+              console.log('Bulk mock scan community rating updated for entry', entry.id, '- Safe votes:', newSafeVotes, 'Unsafe votes:', newUnsafeVotes);
+            }
+          } else {
+            // For real scans, use normal backend community voting
+            const urlToUse = entry.url || entry.qrData;
+            const result = await submitCommunityVote(urlToUse, newTag);
+            
+            // Update the entry with new community data if vote was successful
+            if (result.success && result.data) {
+              updatedHistory = updatedHistory.map(historyEntry => 
+                historyEntry.id === entry.id ? { 
+                  ...historyEntry, 
+                  communityRating: {
+                    confidence: result.data!.confidence,
+                    safeVotes: result.data!.safeVotes,
+                    unsafeVotes: result.data!.unsafeVotes
+                  }
+                } : historyEntry
+              );
+            }
           }
         }
       }
@@ -779,24 +861,51 @@ export default function ScanHistoryScreen() {
       await updateHistory(updatedHistory);
       console.log('Community ratings updated for bulk entries');
     } else if (newTag === null) {
-      // User is removing ratings - retract from community database
+      // User is removing ratings
       for (const entry of entriesToUpdate) {
         if (entry.url || entry.qrData) {
-          const urlToUse = entry.url || entry.qrData;
-          const result = await retractCommunityVote(urlToUse);
-          
-          // Update the entry with new community data if retraction was successful
-          if (result.success && result.data) {
-            updatedHistory = updatedHistory.map(historyEntry => 
-              historyEntry.id === entry.id ? { 
-                ...historyEntry, 
-                communityRating: {
-                  confidence: result.data!.confidence,
-                  safeVotes: result.data!.safeVotes,
-                  unsafeVotes: result.data!.unsafeVotes
-                }
-              } : historyEntry
-            );
+          if (entry.isMockData) {
+            // For mock scans, remove user vote from existing mock community data
+            console.log('Processing bulk mock scan user vote removal for entry', entry.id, '- subtracting from existing community data');
+            const currentCommunityRating = entry.communityRating;
+            const currentUserRating = entry.userRating;
+            
+            if (currentCommunityRating && currentUserRating) {
+              const newSafeVotes = Math.max(0, currentCommunityRating.safeVotes - (currentUserRating === 'safe' ? 1 : 0));
+              const newUnsafeVotes = Math.max(0, currentCommunityRating.unsafeVotes - (currentUserRating === 'unsafe' ? 1 : 0));
+              const totalVotes = newSafeVotes + newUnsafeVotes;
+              const newConfidence = totalVotes > 0 ? newSafeVotes / totalVotes : 0.5;
+              
+              updatedHistory = updatedHistory.map(historyEntry => 
+                historyEntry.id === entry.id ? { 
+                  ...historyEntry, 
+                  communityRating: {
+                    confidence: newConfidence,
+                    safeVotes: newSafeVotes,
+                    unsafeVotes: newUnsafeVotes
+                  }
+                } : historyEntry
+              );
+              console.log('Bulk mock scan community rating updated after vote removal for entry', entry.id, '- Safe votes:', newSafeVotes, 'Unsafe votes:', newUnsafeVotes);
+            }
+          } else {
+            // For real scans, use normal backend community vote retraction
+            const urlToUse = entry.url || entry.qrData;
+            const result = await retractCommunityVote(urlToUse);
+            
+            // Update the entry with new community data if retraction was successful
+            if (result.success && result.data) {
+              updatedHistory = updatedHistory.map(historyEntry => 
+                historyEntry.id === entry.id ? { 
+                  ...historyEntry, 
+                  communityRating: {
+                    confidence: result.data!.confidence,
+                    safeVotes: result.data!.safeVotes,
+                    unsafeVotes: result.data!.unsafeVotes
+                  }
+                } : historyEntry
+              );
+            }
           }
         }
       }
