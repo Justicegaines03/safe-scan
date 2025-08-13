@@ -1426,10 +1426,10 @@ export default function ScanHistoryScreen() {
                 name="person.3"
                 size={23}
                 type="monochrome"
-                tintColor="#000000"
+                tintColor={colors.text}
                 fallback={<ThemedText style={styles.scoreIcon}>U</ThemedText>}
               />
-              <ThemedText style={styles.communityCardText}>
+              <ThemedText style={[styles.communityCardText, { color: colors.text }]}>
                 {!item.communityRating || item.communityRating.safeVotes + item.communityRating.unsafeVotes === 0 
                   ? '  No votes yet' 
                   : (() => {
@@ -1618,18 +1618,32 @@ export default function ScanHistoryScreen() {
         }}
       >
         <View style={styles.userRatingOverlay}>
-          <ThemedView style={styles.userRatingModalContent}>
+          <ThemedView style={[
+            styles.userRatingModalContent,
+            { 
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF'
+            }
+          ]}>
             <ThemedText type="subtitle" style={styles.userRatingModalTitle}>
               {isSelectMode && selectedEntries.size > 1 
                 ? `Rate ${selectedEntries.size} QR codes` 
                 : 'Rate this QR code'}
             </ThemedText>
             
-            <ThemedText style={styles.qrDataPreview} numberOfLines={2}>
+            <ThemedText style={[
+              styles.qrDataPreview,
+              {
+                backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#F5F5F5',
+                color: colorScheme === 'dark' ? '#FFFFFF' : '#333333'
+              }
+            ]} numberOfLines={2}>
               {truncateText(getQRDataString(selectedEntry.qrData), 80)}
             </ThemedText>
             
-            <ThemedText style={styles.userRatingInstructions}>
+            <ThemedText style={[
+              styles.userRatingInstructions,
+              { color: colorScheme === 'dark' ? '#CCCCCC' : '#666666' }
+            ]}>
               What do you think about this QR code's safety?
             </ThemedText>
 
@@ -1638,6 +1652,12 @@ export default function ScanHistoryScreen() {
                 style={[
                   styles.ratingButton,
                   styles.safeButton,
+                  {
+                    backgroundColor: userRating === 'safe' 
+                      ? (colorScheme === 'dark' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(46, 125, 50, 0.1)')
+                      : 'transparent',
+                    borderColor: colorScheme === 'dark' ? '#4CAF50' : '#2E7D32'
+                  },
                   userRating === 'safe' && styles.selectedButton
                 ]}
                 onPress={() => {
@@ -1656,6 +1676,11 @@ export default function ScanHistoryScreen() {
               >
                 <Text style={[
                   styles.ratingButtonText,
+                  {
+                    color: userRating === 'safe' 
+                      ? (colorScheme === 'dark' ? '#4CAF50' : '#2E7D32')
+                      : (colorScheme === 'dark' ? '#FFFFFF' : '#333333')
+                  },
                   userRating === 'safe' && styles.selectedButtonText
                 ]}>
                   Safe
@@ -1666,6 +1691,12 @@ export default function ScanHistoryScreen() {
                 style={[
                   styles.ratingButton,
                   styles.unsafeButton,
+                  {
+                    backgroundColor: userRating === 'unsafe' 
+                      ? (colorScheme === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(198, 40, 40, 0.1)')
+                      : 'transparent',
+                    borderColor: colorScheme === 'dark' ? '#F44336' : '#C62828'
+                  },
                   userRating === 'unsafe' && styles.selectedButton
                 ]}
                 onPress={() => {
@@ -1684,6 +1715,11 @@ export default function ScanHistoryScreen() {
               >
                 <Text style={[
                   styles.ratingButtonText,
+                  {
+                    color: userRating === 'unsafe' 
+                      ? (colorScheme === 'dark' ? '#F44336' : '#C62828')
+                      : (colorScheme === 'dark' ? '#FFFFFF' : '#333333')
+                  },
                   userRating === 'unsafe' && styles.selectedButtonText
                 ]}>
                   Unsafe
@@ -2081,7 +2117,14 @@ export default function ScanHistoryScreen() {
 
       {/* Bulk action buttons - show when in select mode, positioned above the tab bar */}
       {isSelectMode && (
-        <View style={styles.bulkActionContainer}>
+        <View style={[
+          styles.bulkActionContainer,
+          { 
+            backgroundColor: colorScheme === 'dark' 
+              ? 'rgba(28, 28, 30, 0.9)' // Dark mode: mostly black with transparency
+              : 'rgba(248, 249, 250, 0.9)' // Light mode: mostly white with transparency
+          }
+        ]}>
           <TouchableOpacity
             style={[styles.bulkActionButton, { marginLeft: '16.67%' }]} // Position at 1/3 from left
             onPress={handleBulkRate}
@@ -2703,7 +2746,6 @@ const styles = StyleSheet.create({
   },
   userRatingModalContent: {
     width: '85%',
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -2726,16 +2768,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#f5f5f5',
     borderRadius: 8,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    color: '#333',
   },
   userRatingInstructions: {
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 20,
-    color: '#666',
     lineHeight: 20,
   },
   ratingButtonsContainer: {
@@ -2830,7 +2869,7 @@ const styles = StyleSheet.create({
   },
   bulkActionContainer: {
     position: 'absolute',
-    bottom: 90, // Positioned above the tab bar
+    bottom: 83, // Positioned to touch the tab bar
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -2838,8 +2877,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#f8f9fa', // Same color as tab background
-    bottom: 83, // Positioned to touch the tab bar (reduced from 90)
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
   },
