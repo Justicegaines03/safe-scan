@@ -488,6 +488,12 @@ export default function ScanHistoryScreen() {
       entry.id === entryId ? { ...entry, userRating: newTag } : entry
     );
     
+    // Find the updated entry to log the user rating at save time
+    const updatedEntry = updatedHistory.find(entry => entry.id === entryId);
+    if (updatedEntry) {
+      console.log('User Rating at save time:', updatedEntry.userRating);
+    }
+    
     console.log('User tag updated in memory, saving to storage');
     setHistory(updatedHistory);
     await updateHistory(updatedHistory);

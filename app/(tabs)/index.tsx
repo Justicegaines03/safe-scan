@@ -501,6 +501,37 @@ export default function CameraScannerScreen() {
     }
   };
 
+  // Sync user rating to existing history entry
+  const syncUserRatingToHistory = async (newRating: 'safe' | 'unsafe' | null) => {
+    try {
+      const STORAGE_KEY = '@safe_scan_history';
+      const existingHistory = await AsyncStorage.getItem(STORAGE_KEY);
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      
+      // Find the most recent entry (should be the one we just saved)
+      const mostRecentEntry = history.find((entry: any) => !entry.isMockData);
+      
+      if (mostRecentEntry && validationResult?.url) {
+        // Check if this is the entry we want to update (match by URL and timestamp proximity)
+        const timeDiff = Date.now() - mostRecentEntry.timestamp;
+        if (mostRecentEntry.url === validationResult.url && timeDiff < 60000) { // Within 1 minute
+          console.log('Syncing user rating to history entry:', mostRecentEntry.id);
+          console.log('Previous rating:', mostRecentEntry.userRating);
+          console.log('New rating:', newRating);
+          
+          // Update the entry's user rating
+          mostRecentEntry.userRating = newRating;
+          
+          // Save back to storage
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+          console.log('User rating synced successfully to entry:', mostRecentEntry.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing user rating to history:', error);
+    }
+  };
+
   // Reset the scanner
   const resetScanner = () => {
     setValidationResult(null);
@@ -869,6 +900,8 @@ export default function CameraScannerScreen() {
                         const newRating = userRating === 'safe' ? null : 'safe';
                         setUserRating(newRating);
                         console.log('User rated QR code as:', newRating || 'deselected');
+                        // Sync the rating to the already-saved history entry
+                        syncUserRatingToHistory(newRating);
                         // Auto-hide after selection
                         setTimeout(() => setShowUserRating(false));
                       }}
@@ -897,6 +930,8 @@ export default function CameraScannerScreen() {
                         const newRating = userRating === 'unsafe' ? null : 'unsafe';
                         setUserRating(newRating);
                         console.log('User rated QR code as:', newRating || 'deselected');
+                        // Sync the rating to the already-saved history entry
+                        syncUserRatingToHistory(newRating);
                         // Auto-hide after selection
                         setTimeout(() => setShowUserRating(false));
                       }}
