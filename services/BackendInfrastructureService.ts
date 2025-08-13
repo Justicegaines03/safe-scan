@@ -22,12 +22,30 @@ export class BackendInfrastructureService {
   private errorHandler: ErrorHandlingService;
 
   constructor() {
-    this.localStorage = LocalStorageService.getInstance();
+    console.log('BackendInfrastructureService constructor called');
+    
+    console.log('LocalStorageService class:', LocalStorageService);
+    
+    // Try direct instantiation to debug
+    try {
+      this.localStorage = new LocalStorageService();
+      console.log('Direct LocalStorageService instantiation:', this.localStorage);
+      console.log('queueForSync method exists:', typeof this.localStorage.queueForSync);
+      console.log('All localStorage methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this.localStorage)));
+    } catch (error) {
+      console.error('Error creating LocalStorageService:', error);
+      this.localStorage = LocalStorageService.getInstance();
+    }
+    
     this.cloudSync = CloudSyncService.getInstance();
     this.communityDB = CommunityDatabaseService.getInstance();
     this.webSocket = WebSocketService.getInstance();
     this.cache = CacheService.getInstance();
     this.errorHandler = ErrorHandlingService.getInstance();
+    
+    console.log('BackendInfrastructureService - localStorage:', this.localStorage);
+    console.log('BackendInfrastructureService - localStorage methods:', Object.getOwnPropertyNames(this.localStorage));
+    console.log('BackendInfrastructureService - all services initialized');
   }
 
   static getInstance(): BackendInfrastructureService {
@@ -42,16 +60,33 @@ export class BackendInfrastructureService {
    */
   async initialize(): Promise<void> {
     try {
+      console.log('=== Initializing backend services');
+      
       // Initialize local storage and validate data integrity
-      await this.localStorage.validateDataIntegrity();
+      if (this.localStorage && typeof this.localStorage.validateDataIntegrity === 'function') {
+        await this.localStorage.validateDataIntegrity();
+        console.log('localStorage initialized successfully');
+      } else {
+        console.warn('localStorage not available, skipping validation');
+      }
       
       // Start auto-sync
-      this.cloudSync.startAutoSync();
+      if (this.cloudSync && typeof this.cloudSync.startAutoSync === 'function') {
+        this.cloudSync.startAutoSync();
+        console.log('CloudSync started successfully');
+      } else {
+        console.warn('CloudSync not available');
+      }
       
       // Connect to WebSocket for real-time updates
-      const wsConnected = await this.webSocket.connect();
-      if (!wsConnected) {
-        this.errorHandler.setServiceAvailability('webSocket', false);
+      if (this.webSocket && typeof this.webSocket.connect === 'function') {
+        const wsConnected = await this.webSocket.connect();
+        if (!wsConnected && this.errorHandler && typeof this.errorHandler.setServiceAvailability === 'function') {
+          this.errorHandler.setServiceAvailability('webSocket', false);
+        }
+        console.log('WebSocket connection attempted');
+      } else {
+        console.warn('WebSocket not available');
       }
 
       // Setup WebSocket event listeners
@@ -107,24 +142,60 @@ export class BackendInfrastructureService {
    */
   async submitVote(vote: Vote): Promise<DatabaseResponse<CommunityRating>> {
     try {
+      console.log('=== NEW submitVote called with vote:', vote);
+      console.log('=== Using workaround implementation');
+      
       // Add vote to community database
+      console.log('=== About to call errorHandler.executeWithCircuitBreaker');
       const result = await this.errorHandler.executeWithCircuitBreaker('communityDB', async () => {
+        console.log('=== About to call communityDB.addVote');
         return this.communityDB.addVote(vote);
       });
+      console.log('=== addVote completed, result:', result);
+      console.log('=== addVote completed, result:', result);
 
       if (result.success && result.data) {
+        console.log('=== Vote successful, about to cache and broadcast');
+        
         // Cache the updated rating
+        console.log('=== About to call cache.set');
         this.cache.set(`rating_${vote.qrHash}`, result.data);
+        console.log('=== cache.set completed');
         
         // Broadcast update via WebSocket
+        console.log('=== About to call webSocket.broadcastRatingUpdate');
         this.webSocket.broadcastRatingUpdate(vote.qrHash, result.data);
+        console.log('=== webSocket.broadcastRatingUpdate completed');
         
-        // Store vote locally for sync
-        await this.localStorage.queueForSync({
-          type: 'vote',
-          data: vote,
-          timestamp: Date.now()
-        });
+        // Store vote locally for sync - using direct AsyncStorage as workaround
+        console.log('About to queue vote for sync');
+        
+        try {
+          // Direct implementation of queueForSync functionality
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const SYNC_QUEUE_KEY = '@safe_scan_sync_queue';
+          
+          // Get existing queue
+          const existingQueue = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
+          const queue = existingQueue ? JSON.parse(existingQueue) : [];
+          
+          // Add new vote to queue
+          queue.push({
+            type: 'vote',
+            data: vote,
+            timestamp: Date.now(),
+            queuedAt: Date.now(),
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+          });
+          
+          // Save updated queue
+          await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+          console.log('Vote queued for sync successfully');
+          
+        } catch (syncError) {
+          console.error('Failed to queue vote for sync:', syncError);
+          // Don't throw here - the vote was still submitted successfully
+        }
       }
 
       return result;

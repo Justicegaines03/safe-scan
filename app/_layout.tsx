@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { backendInfrastructure } from '@/services';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -23,6 +24,21 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  // Initialize backend infrastructure on app start
+  useEffect(() => {
+    const initializeBackend = async () => {
+      try {
+        console.log('Initializing backend infrastructure...');
+        await backendInfrastructure.initialize();
+        console.log('Backend infrastructure initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize backend infrastructure:', error);
+      }
+    };
+
+    initializeBackend();
+  }, []);
 
   if (!loaded) {
     return null;

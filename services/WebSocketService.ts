@@ -23,6 +23,7 @@ export class WebSocketService {
   private lastUpdateTime = new Map<string, number>();
   private heartbeatInterval: any = null;
   private isConnected = false;
+  private clientId: string = '';
 
   static getInstance(): WebSocketService {
     if (!WebSocketService.instance) {
@@ -35,6 +36,13 @@ export class WebSocketService {
    * Establish WebSocket connection for real-time updates
    */
   async connect(url: string = 'wss://api.safescan.com/updates'): Promise<boolean> {
+    // Skip WebSocket connection in development mode
+    if (__DEV__ || process.env.NODE_ENV === 'development') {
+      console.log('WebSocket connection skipped in development mode');
+      this.isConnected = false;
+      return false;
+    }
+
     try {
       this.ws = new WebSocket(url);
       
@@ -44,16 +52,25 @@ export class WebSocketService {
       this.ws.onerror = this.handleError.bind(this);
 
       return new Promise((resolve) => {
-        const timeout = setTimeout(() => resolve(false), 5000);
+        const timeout = setTimeout(() => {
+          console.log('WebSocket connection timeout - continuing without real-time updates');
+          resolve(false);
+        }, 5000);
         
         this.ws!.onopen = () => {
           clearTimeout(timeout);
           this.handleOpen();
           resolve(true);
         };
+
+        this.ws!.onerror = () => {
+          clearTimeout(timeout);
+          console.log('WebSocket connection failed - continuing without real-time updates');
+          resolve(false);
+        };
       });
     } catch (error) {
-      console.error('WebSocket connection failed:', error);
+      console.log('WebSocket connection failed - continuing without real-time updates:', error);
       return false;
     }
   }
@@ -253,6 +270,12 @@ export class WebSocketService {
    * Broadcast update to all connected clients
    */
   broadcastRatingUpdate(qrHash: string, newRating: CommunityRating): void {
+    // Skip broadcasting in development mode or when not connected
+    if (!this.isConnected || __DEV__ || process.env.NODE_ENV === 'development') {
+      console.log('WebSocket broadcast skipped - not connected or in development mode');
+      return;
+    }
+
     const message: WebSocketMessage = {
       type: 'rating_update',
       qrHash,
@@ -293,16 +316,11 @@ export class WebSocketService {
    * Get unique client identifier
    */
   private getClientId(): string {
-    // Generate or retrieve client ID
-    if (typeof window !== 'undefined') {
-      let clientId = localStorage.getItem('safe_scan_client_id');
-      if (!clientId) {
-        clientId = 'client_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('safe_scan_client_id', clientId);
-      }
-      return clientId;
+    // Generate a client ID for this session (React Native compatible)
+    if (!this.clientId) {
+      this.clientId = 'client_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
-    return 'client_' + Date.now();
+    return this.clientId;
   }
 
   /**

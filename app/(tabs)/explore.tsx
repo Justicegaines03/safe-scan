@@ -21,6 +21,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { backendInfrastructure } from '@/services';
 
 // Types
 interface ScanHistoryEntry {
@@ -55,6 +56,17 @@ interface HistoryFilter {
 
 const STORAGE_KEY = '@safe_scan_history';
 const MAX_HISTORY_DAYS = 30;
+
+// Simple hash function for QR data (same as in scanner tab)
+const hashUrl = async (url: string): Promise<string> => {
+  let hash = 0;
+  for (let i = 0; i < url.length; i++) {
+    const char = url.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16);
+};
 
 export default function ScanHistoryScreen() {
   console.log('History screen component initialized');
@@ -481,8 +493,47 @@ export default function ScanHistoryScreen() {
     setFilteredHistory(filtered);
   };
 
+  // Submit user rating as community vote
+  const submitCommunityVote = async (url: string, rating: 'safe' | 'unsafe') => {
+    if (!backendInfrastructure) {
+      console.error('Backend infrastructure not available for community voting');
+      return;
+    }
+
+    try {
+      // Create QR hash for the community database
+      const qrHash = await hashUrl(url);
+      
+      // Generate a simple user ID (in production, this would be a proper user identifier)
+      const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+      
+      const vote = {
+        userId: userId,
+        qrHash: qrHash,
+        vote: rating,
+        timestamp: Date.now()
+      };
+
+      console.log('Submitting community vote from History tab:', vote);
+      const result = await backendInfrastructure.submitVote(vote);
+      
+      if (result.success && result.data) {
+        console.log('Community vote submitted successfully from History tab!');
+        console.log('Updated community rating:', result.data);
+        console.log(`Safe votes: ${result.data.safeVotes}, Unsafe votes: ${result.data.unsafeVotes}, Total: ${result.data.totalVotes}`);
+      } else {
+        console.error('Failed to submit community vote:', result.error);
+      }
+    } catch (error) {
+      console.error('Error submitting community vote:', error);
+    }
+  };
+
   const updateUserTag = async (entryId: string, newTag: 'safe' | 'unsafe' | null) => {
     console.log('Updating user tag for entry:', entryId, 'to:', newTag);
+    
+    // Find the entry to get its URL for community voting
+    const entryToUpdate = history.find(entry => entry.id === entryId);
     
     const updatedHistory = history.map(entry => 
       entry.id === entryId ? { ...entry, userRating: newTag } : entry
@@ -497,6 +548,13 @@ export default function ScanHistoryScreen() {
     console.log('User tag updated in memory, saving to storage');
     setHistory(updatedHistory);
     await updateHistory(updatedHistory);
+    
+    // Submit to community database if rating is not null and we have a URL
+    if (newTag && entryToUpdate && (entryToUpdate.url || entryToUpdate.qrData)) {
+      const urlToUse = entryToUpdate.url || entryToUpdate.qrData;
+      submitCommunityVote(urlToUse, newTag);
+    }
+    
     setEditingTag(null);
     setShowUserRating(false);
     setSelectedEntry(null);
@@ -506,6 +564,9 @@ export default function ScanHistoryScreen() {
   const updateBulkUserTags = async (entryIds: string[], newTag: 'safe' | 'unsafe' | null) => {
     console.log('Updating user tags for entries:', entryIds, 'to:', newTag);
     
+    // Get the entries before updating for community voting
+    const entriesToUpdate = history.filter(entry => entryIds.includes(entry.id));
+    
     const updatedHistory = history.map(entry => 
       entryIds.includes(entry.id) ? { ...entry, userRating: newTag } : entry
     );
@@ -513,6 +574,17 @@ export default function ScanHistoryScreen() {
     console.log('Bulk user tags updated in memory, saving to storage');
     setHistory(updatedHistory);
     await updateHistory(updatedHistory);
+    
+    // Submit community votes if rating is not null
+    if (newTag) {
+      for (const entry of entriesToUpdate) {
+        if (entry.url || entry.qrData) {
+          const urlToUse = entry.url || entry.qrData;
+          submitCommunityVote(urlToUse, newTag);
+        }
+      }
+    }
+    
     setShowUserRating(false);
     setSelectedEntry(null);
     setSelectedEntries(new Set());

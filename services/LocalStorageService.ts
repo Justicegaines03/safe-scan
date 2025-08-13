@@ -20,10 +20,17 @@ const CLEANUP_THRESHOLD = 0.9; // Start cleanup at 90% capacity
 export class LocalStorageService {
   private static instance: LocalStorageService;
 
+  constructor() {
+    console.log('LocalStorageService constructor called');
+  }
+
   static getInstance(): LocalStorageService {
+    console.log('LocalStorageService.getInstance() called');
     if (!LocalStorageService.instance) {
+      console.log('Creating new LocalStorageService instance');
       LocalStorageService.instance = new LocalStorageService();
     }
+    console.log('Returning LocalStorageService instance:', LocalStorageService.instance);
     return LocalStorageService.instance;
   }
 

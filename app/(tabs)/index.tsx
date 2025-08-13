@@ -501,6 +501,42 @@ export default function CameraScannerScreen() {
     }
   };
 
+  // Submit user rating as community vote
+  const submitCommunityVote = async (url: string, rating: 'safe' | 'unsafe') => {
+    if (!backendInfrastructure) {
+      console.error('Backend infrastructure not available for community voting');
+      return;
+    }
+
+    try {
+      // Create QR hash for the community database
+      const qrHash = await hashUrl(url);
+      
+      // Generate a simple user ID (in production, this would be a proper user identifier)
+      const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+      
+      const vote = {
+        userId: userId,
+        qrHash: qrHash,
+        vote: rating,
+        timestamp: Date.now()
+      };
+
+      console.log('Submitting community vote:', vote);
+      const result = await backendInfrastructure.submitVote(vote);
+      
+      if (result.success && result.data) {
+        console.log('Community vote submitted successfully!');
+        console.log('Updated community rating:', result.data);
+        console.log(`Safe votes: ${result.data.safeVotes}, Unsafe votes: ${result.data.unsafeVotes}, Total: ${result.data.totalVotes}`);
+      } else {
+        console.error('Failed to submit community vote:', result.error);
+      }
+    } catch (error) {
+      console.error('Error submitting community vote:', error);
+    }
+  };
+
   // Sync user rating to existing history entry
   const syncUserRatingToHistory = async (newRating: 'safe' | 'unsafe' | null) => {
     try {
@@ -902,6 +938,10 @@ export default function CameraScannerScreen() {
                         console.log('User rated QR code as:', newRating || 'deselected');
                         // Sync the rating to the already-saved history entry
                         syncUserRatingToHistory(newRating);
+                        // Submit to community database if rating is not null
+                        if (newRating && validationResult?.url) {
+                          submitCommunityVote(validationResult.url, newRating);
+                        }
                         // Auto-hide after selection
                         setTimeout(() => setShowUserRating(false));
                       }}
@@ -932,6 +972,10 @@ export default function CameraScannerScreen() {
                         console.log('User rated QR code as:', newRating || 'deselected');
                         // Sync the rating to the already-saved history entry
                         syncUserRatingToHistory(newRating);
+                        // Submit to community database if rating is not null
+                        if (newRating && validationResult?.url) {
+                          submitCommunityVote(validationResult.url, newRating);
+                        }
                         // Auto-hide after selection
                         setTimeout(() => setShowUserRating(false));
                       }}
