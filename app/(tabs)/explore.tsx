@@ -941,6 +941,30 @@ export default function ScanHistoryScreen() {
           style: 'destructive',
           onPress: async () => {
             console.log('User confirmed delete, removing entry:', entryId);
+            
+            // Find the entry to delete and check if it has a user rating
+            const entryToDelete = history.find(entry => entry.id === entryId);
+            
+            // If entry has a user rating, retract the community vote before deletion
+            if (entryToDelete && entryToDelete.userRating && (entryToDelete.url || entryToDelete.qrData)) {
+              console.log('Entry has user rating, retracting community vote before deletion');
+              const urlToUse = entryToDelete.url || entryToDelete.qrData;
+              
+              if (!entryToDelete.isMockData) {
+                // For real scans, use backend community vote retraction
+                try {
+                  const result = await retractCommunityVote(urlToUse);
+                  if (result.success) {
+                    console.log('Community vote retracted successfully before deletion');
+                  } else {
+                    console.warn('Failed to retract community vote before deletion:', result.error);
+                  }
+                } catch (error) {
+                  console.error('Error retracting community vote before deletion:', error);
+                }
+              }
+            }
+            
             const beforeCount = history.length;
             const updatedHistory = history.filter(entry => entry.id !== entryId);
             console.log('Entry removed from history, count reduced from', beforeCount, 'to', updatedHistory.length);
@@ -982,6 +1006,33 @@ export default function ScanHistoryScreen() {
           style: 'destructive',
           onPress: async () => {
             const selectedIds = Array.from(selectedEntries);
+            console.log('Bulk delete starting for', selectedIds.length, 'entries');
+            
+            // Find entries to delete and retract community votes if they have user ratings
+            const entriesToDelete = history.filter(entry => selectedIds.includes(entry.id));
+            
+            // Retract community votes for entries that have user ratings
+            for (const entryToDelete of entriesToDelete) {
+              if (entryToDelete.userRating && (entryToDelete.url || entryToDelete.qrData)) {
+                console.log('Entry', entryToDelete.id, 'has user rating, retracting community vote before deletion');
+                const urlToUse = entryToDelete.url || entryToDelete.qrData;
+                
+                if (!entryToDelete.isMockData) {
+                  // For real scans, use backend community vote retraction
+                  try {
+                    const result = await retractCommunityVote(urlToUse);
+                    if (result.success) {
+                      console.log('Community vote retracted successfully for entry', entryToDelete.id);
+                    } else {
+                      console.warn('Failed to retract community vote for entry', entryToDelete.id, ':', result.error);
+                    }
+                  } catch (error) {
+                    console.error('Error retracting community vote for entry', entryToDelete.id, ':', error);
+                  }
+                }
+              }
+            }
+            
             const updatedHistory = history.filter(entry => !selectedIds.includes(entry.id));
             setHistory(updatedHistory);
             await updateHistory(updatedHistory);
