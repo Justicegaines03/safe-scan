@@ -45,6 +45,7 @@ interface ScanHistoryEntry {
   };
   url?: string;
   userRating?: 'safe' | 'unsafe' | null;
+  userOverride?: boolean; // Flag to indicate user has overridden the assessment
   isMockData?: boolean; // Flag to identify mock training data
 }
 
@@ -147,7 +148,7 @@ export default function ScanHistoryScreen() {
       
       
     } catch (error) {
-      console.error('Error loading history:', error);
+      console.log('Error loading history:', error);
       // Generate mock data on error for development
       console.log('Generating mock history data for development');
       const mockData = generateMockHistory();
@@ -166,7 +167,7 @@ export default function ScanHistoryScreen() {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
       console.log('History successfully saved to storage');
     } catch (error) {
-      console.error('Error saving history:', error);
+      console.log('Error saving history:', error);
     }
   };
 
@@ -497,7 +498,7 @@ export default function ScanHistoryScreen() {
   // Submit user rating as community vote
   const submitCommunityVote = async (url: string, rating: 'safe' | 'unsafe') => {
     if (!backendInfrastructure) {
-      console.error('Backend infrastructure not available for community voting');
+      console.log('Backend infrastructure not available for community voting');
       return { success: false, error: 'Backend infrastructure not available', timestamp: Date.now() };
     }
 
@@ -530,21 +531,12 @@ export default function ScanHistoryScreen() {
         console.log('Updated community rating:', result.data);
         console.log(`Safe votes: ${result.data.safeVotes}, Unsafe votes: ${result.data.unsafeVotes}, Total: ${result.data.totalVotes}`);
       } else {
-        console.error('Failed to submit community vote:', result.error);
-        
-        // Show user-friendly error message for duplicate votes
-        if (result.error?.includes('already voted')) {
-          Alert.alert(
-            'Already Rated',
-            'You have already rated this QR code. Each user can only rate a QR code once to ensure fair community ratings.',
-            [{ text: 'OK' }]
-          );
-        }
+        console.log('Failed to submit community vote:', result.error);
       }
       
       return result;
     } catch (error) {
-      console.error('Error submitting community vote:', error);
+      console.log('Error submitting community vote:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error', timestamp: Date.now() };
     }
   };
@@ -555,14 +547,32 @@ export default function ScanHistoryScreen() {
     // Find the entry to get its URL for community voting
     const entryToUpdate = history.find(entry => entry.id === entryId);
     
-    const updatedHistory = history.map(entry => 
-      entry.id === entryId ? { ...entry, userRating: newTag } : entry
-    );
+    const updatedHistory = history.map(entry => {
+      if (entry.id === entryId) {
+        const updatedEntry = { ...entry, userRating: newTag };
+        
+        // If user provided a rating, override the safety status
+        if (newTag) {
+          updatedEntry.safetyStatus = newTag;
+          updatedEntry.userOverride = true;
+          console.log('User override applied - safety status changed to:', newTag);
+        } else {
+          // If user removed their rating, keep current safetyStatus but mark as no override
+          updatedEntry.userOverride = false;
+          console.log('User override removed');
+        }
+        
+        return updatedEntry;
+      }
+      return entry;
+    });
     
     // Find the updated entry to log the user rating at save time
     const updatedEntry = updatedHistory.find(entry => entry.id === entryId);
     if (updatedEntry) {
       console.log('User Rating at save time:', updatedEntry.userRating);
+      console.log('Safety Status at save time:', updatedEntry.safetyStatus);
+      console.log('User Override at save time:', updatedEntry.userOverride);
     }
     
     console.log('User tag updated in memory, saving to storage');
@@ -604,9 +614,25 @@ export default function ScanHistoryScreen() {
     // Get the entries before updating for community voting
     const entriesToUpdate = history.filter(entry => entryIds.includes(entry.id));
     
-    let updatedHistory = history.map(entry => 
-      entryIds.includes(entry.id) ? { ...entry, userRating: newTag } : entry
-    );
+    let updatedHistory = history.map(entry => {
+      if (entryIds.includes(entry.id)) {
+        const updatedEntry = { ...entry, userRating: newTag };
+        
+        // If user provided a rating, override the safety status
+        if (newTag) {
+          updatedEntry.safetyStatus = newTag;
+          updatedEntry.userOverride = true;
+          console.log('User override applied to entry', entry.id, '- safety status changed to:', newTag);
+        } else {
+          // If user removed their rating, keep current safetyStatus but mark as no override
+          updatedEntry.userOverride = false;
+          console.log('User override removed from entry', entry.id);
+        }
+        
+        return updatedEntry;
+      }
+      return entry;
+    });
     
     console.log('Bulk user tags updated in memory, saving to storage');
     setHistory(updatedHistory);
@@ -750,7 +776,7 @@ export default function ScanHistoryScreen() {
         console.log('Mobile share completed for history export');
       }
     } catch (error) {
-      console.error('Error exporting history:', error);
+      console.log('Error exporting history:', error);
       Alert.alert('Error', 'Failed to export history');
     }
   };
@@ -818,7 +844,7 @@ export default function ScanHistoryScreen() {
               console.log('Mock scans imported successfully, total entries:', combinedHistory.length);
               Alert.alert('Success', `Imported ${mockData.length} mock scans for demonstration`);
             } catch (error) {
-              console.error('Error importing mock scans:', error);
+              console.log('Error importing mock scans:', error);
               Alert.alert('Error', 'Failed to import mock scans');
             }
           }
@@ -892,7 +918,7 @@ export default function ScanHistoryScreen() {
       console.log('CSV export completed successfully');
       Alert.alert('Success', `Exported ${history.length} scans to CSV format`);
     } catch (error) {
-      console.error('CSV Export Error:', error);
+      console.log('CSV Export Error:', error);
       Alert.alert('Error', 'Failed to export CSV file');
     }
   };
@@ -944,7 +970,7 @@ export default function ScanHistoryScreen() {
       console.log('JSON export completed successfully');
       Alert.alert('Success', `Exported ${history.length} scans to JSON format`);
     } catch (error) {
-      console.error('JSON Export Error:', error);
+      console.log('JSON Export Error:', error);
       Alert.alert('Error', 'Failed to export JSON file');
     }
   };
@@ -972,7 +998,7 @@ export default function ScanHistoryScreen() {
         `History Entries: ${history.length}\nStorage Keys: ${safeScanKeys.length}\nApproximate Size: ${sizeInKB} KB\n\nOldest Entry: ${history.length > 0 ? new Date(Math.min(...history.map(h => h.timestamp))).toLocaleDateString() : 'None'}\nNewest Entry: ${history.length > 0 ? new Date(Math.max(...history.map(h => h.timestamp))).toLocaleDateString() : 'None'}`
       );
     } catch (error) {
-      console.error('Error retrieving storage information:', error);
+      console.log('Error retrieving storage information:', error);
       Alert.alert('Error', 'Failed to retrieve storage information');
     }
   };
@@ -1021,11 +1047,12 @@ export default function ScanHistoryScreen() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, userOverride?: boolean) => {
     // Bold colors for instant recognition
+    // If user has overridden, use brighter colors to indicate user control
     switch (status) {
-      case 'safe': return '#00E676';   // Bright green
-      case 'unsafe': return '#FF1744'; // Bright red
+      case 'safe': return userOverride ? '#00FF00' : '#00E676';   // Brighter green for user override
+      case 'unsafe': return userOverride ? '#FF0000' : '#FF1744'; // Brighter red for user override  
       case 'unknown': return '#FFC107'; // Bright yellow
       default: return '#FFC107';
     }
@@ -1060,8 +1087,8 @@ export default function ScanHistoryScreen() {
           styles.historyItem, 
           { 
             backgroundColor: colors.background, 
-            borderColor: isSelected ? '#007AFF' : getStatusColor(item.safetyStatus),
-            borderWidth: isSelected ? 3 : 1.5,
+            borderColor: isSelected ? '#007AFF' : getStatusColor(item.safetyStatus, item.userOverride),
+            borderWidth: isSelected ? 3 : (item.userOverride ? 3 : 1.5), // Thicker border for user overrides
             opacity: isSelectMode && !isSelected ? 0.6 : 1
           }
         ]}
@@ -1087,7 +1114,10 @@ export default function ScanHistoryScreen() {
           <View style={styles.statusContainer}>
             <ThemedText type="title" style={[styles.statusText, { fontSize: 20}]}>
               {typeof item.safetyStatus === 'string' ? 
-                item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1) : 
+                (item.userOverride ? 
+                  '★ ' + item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1) :
+                  item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1)
+                ) : 
                 'Unknown'
               }
             </ThemedText>
@@ -1104,6 +1134,7 @@ export default function ScanHistoryScreen() {
                   <ThemedText style={styles.mockTagText}>Mock</ThemedText>
                 </View>
               )}
+              {/* User override indicator */}
             </View>
           </View>
           <ThemedText style={styles.timestamp}>
@@ -1184,12 +1215,13 @@ export default function ScanHistoryScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.statusCard, { backgroundColor: getStatusColor(selectedEntry.safetyStatus) }]}>
+            <View style={[styles.statusCard, { backgroundColor: getStatusColor(selectedEntry.safetyStatus, selectedEntry.userOverride) }]}>
               <ThemedText style={styles.statusCardTitle}>
-                {getStatusIcon(selectedEntry.safetyStatus)} {selectedEntry.safetyStatus.toUpperCase()}
+                {getStatusIcon(selectedEntry.safetyStatus)} {selectedEntry.userOverride ? '★ ' : ''}{selectedEntry.safetyStatus.toUpperCase()}
               </ThemedText>
               <ThemedText style={styles.statusCardTime}>
                 Scanned {formatTimestamp(selectedEntry.timestamp)}
+                {selectedEntry.userOverride && <ThemedText> • User Override</ThemedText>}
               </ThemedText>
             </View>
 

@@ -523,8 +523,12 @@ export default function CameraScannerScreen() {
         return (maxId + 1).toString();
       };
       
-      // Extract safety status string from the nested safety object
+      // Extract safety status string from the nested safety object or user override
       const getSafetyStatus = (): string => {
+        // If user has provided a rating, override the system assessment
+        if (userRating) {
+          return userRating; // 'safe' or 'unsafe'
+        }
         if (scanData.safety?.safety) {
           return scanData.safety.safety; // This is the string: 'safe', 'unsafe', or 'unknown'
         }
@@ -537,10 +541,11 @@ export default function CameraScannerScreen() {
         timestamp: scanEndTime,
         qrData: scanData.url, // Use the URL as qrData for consistency
         virusTotalResult: scanData.virusTotal, 
-        safetyStatus: getSafetyStatus(), // Now correctly a string
+        safetyStatus: getSafetyStatus(), // Now correctly a string with user override
         communityRating: scanData.community, 
         url: scanData.url,
         userRating: userRating, // Add user's safety rating
+        userOverride: !!userRating, // Flag to indicate user has overridden the assessment
         isMockData: false // Mark as real scan data
       };
       
@@ -551,7 +556,7 @@ export default function CameraScannerScreen() {
       const trimmedHistory = history.slice(0, 100);
       
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
-      console.log('Saved to History - ID:', newEntry.id, 'Safety:', newEntry.safetyStatus, 'User Rating:', newEntry.userRating, 'Mock:', newEntry.isMockData);
+      console.log('Saved to History - ID:', newEntry.id, 'Safety:', newEntry.safetyStatus, 'User Rating:', newEntry.userRating, 'User Override:', newEntry.userOverride, 'Mock:', newEntry.isMockData);
     } catch (error) {
       console.error('Error saving to history:', error);
     }
@@ -594,15 +599,6 @@ export default function CameraScannerScreen() {
         console.log(`Safe votes: ${result.data.safeVotes}, Unsafe votes: ${result.data.unsafeVotes}, Total: ${result.data.totalVotes}`);
       } else {
         console.log('Failed to submit community vote:', result.error);
-        
-        // Show user-friendly error message for duplicate votes
-        if (result.error?.includes('already voted')) {
-          Alert.alert(
-            'Already Rated',
-            'You have already rated this QR code. Each user can only rate a QR code once to ensure fair community ratings.',
-            [{ text: 'OK' }]
-          );
-        }
       }
       
       return result;
@@ -632,6 +628,17 @@ export default function CameraScannerScreen() {
           
           // Update the entry's user rating
           mostRecentEntry.userRating = newRating;
+          
+          // If user provided a rating, override the safety status
+          if (newRating) {
+            mostRecentEntry.safetyStatus = newRating;
+            mostRecentEntry.userOverride = true;
+            console.log('User override applied - safety status changed to:', newRating);
+          } else {
+            // If user removed their rating, revert to original system assessment
+            mostRecentEntry.userOverride = false;
+            // Keep the original safety status from the system assessment
+          }
           
           // Update community data if provided
           if (communityData) {
@@ -994,19 +1001,23 @@ export default function CameraScannerScreen() {
                     size={styles.virusTotalIconSize.fontSize} 
                     tintColor="#FFFFFF" 
                   />
-                  <ThemedText style={[
+                    <ThemedText style={[
                     styles.detailTitle,
                     { color: '#FFFFFF' }
-                  ]}>
+                    ]}>
                     {validationResult.virusTotal 
                       ? (validationResult.virusTotal.positives === 0 ? ' Clean' : ' Threat')
-                      : ' Unknown'} 
-                  </ThemedText>
+                      : ' Unknown'
+                    } 
+                    </ThemedText>
                 </ThemedView>
 
                 {/* Security Status */}
                 <ThemedText type="title" style={[styles.quickResultTitle, { backgroundColor: 'transparent', fontSize: 28 }]}>
-                  {!validationResult.virusTotal ? 'Warning' : (validationResult.virusTotal.isSecure ? 'Safe' : 'Unsafe')}
+                  {userRating ? 
+                    (userRating === 'safe' ? 'Safe' : 'Unsafe') : 
+                    (!validationResult.virusTotal ? 'Warning' : (validationResult.virusTotal.isSecure ? 'Safe' : 'Unsafe'))
+                  }
                 </ThemedText>
 
                 {/* Community Rating */}
