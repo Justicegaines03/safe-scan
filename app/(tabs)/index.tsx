@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { 
   StyleSheet, 
   View, 
@@ -111,6 +112,48 @@ export default function CameraScannerScreen() {
       requestPermission();
     }
   }, [permission, requestPermission]);
+
+  // Check for reset signal when tab becomes focused (only if user interacted with history buttons)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Scanner tab focused - checking for reset signal...');
+      
+      const checkForResetSignal = async () => {
+        try {
+          const resetSignal = await AsyncStorage.getItem('resetScanner');
+          console.log('Reset signal check result:', resetSignal ? `Found: ${resetSignal}` : 'No signal found');
+          
+          if (resetSignal) {
+            console.log('RESETTING SCANNER STATE - Signal timestamp:', resetSignal);
+            console.log('Current state before reset:', {
+              isScanning,
+              hasValidationResult: !!validationResult,
+              showUserRating,
+              userRating,
+              isValidating
+            });
+            
+            // Reset scanner state only if user clicked Rate/Open in history
+            setIsScanning(true);
+            setValidationResult(null);
+            setShowUserRating(false);
+            setUserRating(null);
+            setIsValidating(false);
+            
+            // Clear the signal
+            await AsyncStorage.removeItem('resetScanner');
+            console.log('Scanner reset completed and signal cleared');
+          } else {
+            console.log('No reset signal - keeping current state');
+          }
+        } catch (error) {
+          console.error('Error checking reset signal on focus:', error);
+        }
+      };
+
+      checkForResetSignal();
+    }, [isScanning, validationResult, showUserRating, userRating, isValidating])
+  );
 
   // Determine if the URL is http or https
   const validateHTTP = (url: string): string | null => {

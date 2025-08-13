@@ -1258,9 +1258,28 @@ export default function ScanHistoryScreen() {
       }
     };
 
-    const handleOpenLink = (e: any) => {
+    // Function to signal scanner tab to reset to scanning mode
+    const signalScannerReset = async () => {
+      try {
+        const timestamp = Date.now().toString();
+        await AsyncStorage.setItem('resetScanner', timestamp);
+        console.log('Signal sent to reset scanner tab - timestamp:', timestamp);
+        
+        // Verify the signal was stored
+        const verification = await AsyncStorage.getItem('resetScanner');
+        console.log('Signal verification - stored value:', verification);
+      } catch (error) {
+        console.error('Error signaling scanner reset:', error);
+      }
+    };
+
+    const handleOpenLink = async (e: any) => {
       e.stopPropagation(); // Prevent triggering the main item press
+      console.log('Open button clicked for item:', item.id);
       const urlToOpen = item.url || item.qrData;
+      
+      // Signal scanner to reset
+      await signalScannerReset();
       
       // Check if it's a valid URL that can be opened
       if (urlToOpen && isOpenableUrl(urlToOpen)) {
@@ -1271,9 +1290,13 @@ export default function ScanHistoryScreen() {
       }
     };
 
-    const handleRate = (e: any) => {
+    const handleRate = async (e: any) => {
       e.stopPropagation(); // Prevent triggering the main item press
-      console.log('Rate button pressed for item:', item.id);
+      console.log('Rate button clicked for item:', item.id);
+      
+      // Signal scanner to reset
+      await signalScannerReset();
+      
       setSelectedEntry(item);
       setUserRating(item.userRating || null);
       setShowUserRating(true);
