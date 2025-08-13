@@ -13,6 +13,7 @@ import {
   Share,
   Text,
   Image,
+  Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
@@ -1197,6 +1198,43 @@ export default function ScanHistoryScreen() {
     }
   };
 
+  const openLink = async (url: string) => {
+    try {
+      console.log('Attempting to open URL:', url);
+      
+      // Validate URL format first
+      if (!url || typeof url !== 'string') {
+        console.error('Invalid URL provided:', url);
+        Alert.alert('Error', 'Invalid URL provided');
+        return;
+      }
+
+      // Ensure URL has a proper protocol
+      let formattedUrl = url.trim();
+      if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+        formattedUrl = `https://${formattedUrl}`;
+        console.log('Added https protocol, new URL:', formattedUrl);
+      }
+
+      console.log('Checking if URL can be opened:', formattedUrl);
+      const supported = await Linking.canOpenURL(formattedUrl);
+      console.log('URL supported:', supported);
+      
+      if (supported) {
+        console.log('Opening URL...');
+        await Linking.openURL(formattedUrl);
+        console.log('URL opened successfully');
+      } else {
+        console.error('URL not supported by device:', formattedUrl);
+        Alert.alert('Error', `Cannot open this URL: ${formattedUrl}\n\nThis URL format may not be supported on your device.`);
+      }
+    } catch (error) {
+      console.error('Error opening URL:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Failed to open URL: ${errorMessage}`);
+    }
+  };
+
   const renderHistoryItem = ({ item }: { item: ScanHistoryEntry }) => {
     const isSelected = selectedEntries.has(item.id);
 
@@ -1220,126 +1258,171 @@ export default function ScanHistoryScreen() {
       }
     };
 
-    return (
-      <TouchableOpacity
-        style={[
-          styles.historyItem, 
-          { 
-            backgroundColor: colors.background, 
-            borderColor: isSelected ? '#007AFF' : getStatusColor(item.safetyStatus, item.userOverride),
-            borderWidth: isSelected ? 3 : (item.userOverride ? 3 : 1.5), // Thicker border for user overrides
-            opacity: isSelectMode && !isSelected ? 0.6 : 1
-          }
-        ]}
-        onPress={handlePress}
-        activeOpacity={0.7}
-      >
-        {/* Selection indicator */}
-        {isSelectMode && (
-          <View style={styles.selectionIndicator}>
-            <View style={[
-              styles.selectionCircle,
-              { backgroundColor: isSelected ? '#007AFF' : 'transparent' }
-            ]}>
-              {isSelected && (
-                <ThemedText style={styles.checkmark}>✓</ThemedText>
-              )}
-            </View>
-          </View>
-        )}
+    const handleOpenLink = (e: any) => {
+      e.stopPropagation(); // Prevent triggering the main item press
+      const urlToOpen = item.url || item.qrData;
+      if (urlToOpen) {
+        openLink(urlToOpen);
+      } else {
+        Alert.alert('Error', 'No URL available to open');
+      }
+    };
 
-        {/* Safety status at the top */}
-        <View style={styles.topStatusContainer}>
-          <View style={styles.statusContainer}>
-            <ThemedText type="title" style={[styles.statusText, { fontSize: 20}]}>
-              {typeof item.safetyStatus === 'string' ? 
-                (item.userOverride ? 
-                  '★ ' + item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1) :
-                  item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1)
-                ) : 
-                'Unknown'
-              }
-            </ThemedText>
-            {/* Quick scan time indicator and mock tag */}
-            <View style={styles.scanTimeContainer}>
-              {item.scanDuration && (
-                <ThemedText style={styles.scanTime}>
-                  ({Math.round(item.scanDuration / 100) / 10}s)
-                </ThemedText>
-              )}
-              {/* Mock tag for training data */}
-              {item.isMockData && (
-                <View style={styles.mockTag}>
-                  <ThemedText style={styles.mockTagText}>Mock</ThemedText>
-                </View>
-              )}
-              {/* User override indicator */}
-            </View>
-          </View>
-          <ThemedText style={styles.timestamp}>
-            {formatTimestamp(item.timestamp)}
-          </ThemedText>
-        </View>
-        
-        {/* Link/QR Data in the middle */}
-        <ThemedText style={styles.qrData} numberOfLines={1}>
-          {truncateText(getQRDataString(item.qrData), 60)}
-        </ThemedText>
-        
-        {/* VirusTotal score and Community votes below the link */}
-        <View style={styles.bottomScoresContainer}>
-          {/* Always show VirusTotal section, even if no data */}
-          <View style={[
-            styles.scoreCard,
+    // Check if the QR data looks like a URL that can be opened
+    const isOpenableUrl = (data: string): boolean => {
+      if (!data || typeof data !== 'string') return false;
+      const lowerData = data.toLowerCase();
+      return lowerData.startsWith('http://') || 
+             lowerData.startsWith('https://') || 
+             lowerData.includes('.com') || 
+             lowerData.includes('.org') || 
+             lowerData.includes('.net') ||
+             lowerData.includes('.edu') ||
+             lowerData.includes('.gov');
+    };
+
+    const showOpenButton = isOpenableUrl(item.url || item.qrData);
+
+    return (
+      <View style={styles.historyItemWrapper}>
+        <TouchableOpacity
+          style={[
+            styles.historyItem, 
             { 
-              backgroundColor: !item.virusTotalResult 
-                ? '#9E9E9E' // Gray for unknown/unavailable
-                : item.virusTotalResult.positives === 0 ? '#2E7D32' : '#C62828' 
+              backgroundColor: colors.background, 
+              borderColor: isSelected ? '#007AFF' : getStatusColor(item.safetyStatus, item.userOverride),
+              borderWidth: isSelected ? 3 : (item.userOverride ? 3 : 1.5), // Thicker border for user overrides
+              opacity: isSelectMode && !isSelected ? 0.6 : 1
             }
-          ]}>
-            <SymbolView
-              name="shield.checkered"
-              size={16}
-              type="monochrome"
-              tintColor="#FFFFFF"
-              fallback={<ThemedText style={styles.scoreIcon}>VT</ThemedText>}
-            />
-            <ThemedText style={styles.scoreCardText}>
-              {!item.virusTotalResult 
-                ? ' Unknown' 
-                : item.virusTotalResult.positives === 0 ? ' Clean' : ' Threat'}
+          ]}
+          onPress={handlePress}
+          activeOpacity={0.7}
+        >
+          {/* Selection indicator */}
+          {isSelectMode && (
+            <View style={styles.selectionIndicator}>
+              <View style={[
+                styles.selectionCircle,
+                { backgroundColor: isSelected ? '#007AFF' : 'transparent' }
+              ]}>
+                {isSelected && (
+                  <ThemedText style={styles.checkmark}>✓</ThemedText>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Safety status at the top */}
+          <View style={styles.topStatusContainer}>
+            <View style={styles.statusContainer}>
+              <ThemedText type="title" style={[styles.statusText, { fontSize: 20}]}>
+                {typeof item.safetyStatus === 'string' ? 
+                  (item.userOverride ? 
+                    '★ ' + item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1) :
+                    item.safetyStatus.charAt(0).toUpperCase() + item.safetyStatus.slice(1)
+                  ) : 
+                  'Unknown'
+                }
+              </ThemedText>
+              {/* Quick scan time indicator and mock tag */}
+              <View style={styles.scanTimeContainer}>
+                {item.scanDuration && (
+                  <ThemedText style={styles.scanTime}>
+                    ({Math.round(item.scanDuration / 100) / 10}s)
+                  </ThemedText>
+                )}
+                {/* Mock tag for training data */}
+                {item.isMockData && (
+                  <View style={styles.mockTag}>
+                    <ThemedText style={styles.mockTagText}>Mock</ThemedText>
+                  </View>
+                )}
+                {/* User override indicator */}
+              </View>
+            </View>
+            <ThemedText style={styles.timestamp}>
+              {formatTimestamp(item.timestamp)}
             </ThemedText>
           </View>
           
-          {/* Always show Community rating section, even if no data */}
-          <View style={styles.communityCard}>
-            <SymbolView
-              name="person.3"
-              size={23}
-              type="monochrome"
-              tintColor="#000000"
-              fallback={<ThemedText style={styles.scoreIcon}>U</ThemedText>}
-            />
-            <ThemedText style={styles.communityCardText}>
-              {!item.communityRating || item.communityRating.safeVotes + item.communityRating.unsafeVotes === 0 
-                ? '  No votes yet' 
-                : (() => {
-                    const safeVotes = item.communityRating.safeVotes || 0;
-                    const unsafeVotes = item.communityRating.unsafeVotes || 0;
-                    
-                    if (safeVotes > unsafeVotes) {
-                      return safeVotes === 1 ? `  ${safeVotes} safe vote` : `  ${safeVotes} safe votes`;
-                    } else if (unsafeVotes > safeVotes) {
-                      return unsafeVotes === 1 ? `  ${unsafeVotes} unsafe vote` : `  ${unsafeVotes} unsafe votes`;
-                    } else {
-                      // Equal votes, show safe votes by default
-                      return safeVotes === 1 ? `  ${safeVotes} safe vote` : `  ${safeVotes} safe votes`;
-                    }
-                  })()}
-            </ThemedText>
+          {/* Link/QR Data in the middle */}
+          <ThemedText style={[styles.qrData, showOpenButton && { paddingRight: 90 }]} numberOfLines={1}>
+            {truncateText(getQRDataString(item.qrData), showOpenButton ? 50 : 60)}
+          </ThemedText>
+          
+          {/* VirusTotal score and Community votes below the link */}
+          <View style={styles.bottomScoresContainer}>
+            {/* Always show VirusTotal section, even if no data */}
+            <View style={[
+              styles.scoreCard,
+              { 
+                backgroundColor: !item.virusTotalResult 
+                  ? '#9E9E9E' // Gray for unknown/unavailable
+                  : item.virusTotalResult.positives === 0 ? '#2E7D32' : '#C62828' 
+              }
+            ]}>
+              <SymbolView
+                name="shield.checkered"
+                size={16}
+                type="monochrome"
+                tintColor="#FFFFFF"
+                fallback={<ThemedText style={styles.scoreIcon}>VT</ThemedText>}
+              />
+              <ThemedText style={styles.scoreCardText}>
+                {!item.virusTotalResult 
+                  ? ' Unknown' 
+                  : item.virusTotalResult.positives === 0 ? ' Clean' : ' Threat'}
+              </ThemedText>
+            </View>
+            
+            {/* Always show Community rating section, even if no data */}
+            <View style={styles.communityCard}>
+              <SymbolView
+                name="person.3"
+                size={23}
+                type="monochrome"
+                tintColor="#000000"
+                fallback={<ThemedText style={styles.scoreIcon}>U</ThemedText>}
+              />
+              <ThemedText style={styles.communityCardText}>
+                {!item.communityRating || item.communityRating.safeVotes + item.communityRating.unsafeVotes === 0 
+                  ? '  No votes yet' 
+                  : (() => {
+                      const safeVotes = item.communityRating.safeVotes || 0;
+                      const unsafeVotes = item.communityRating.unsafeVotes || 0;
+                      
+                      if (safeVotes > unsafeVotes) {
+                        return safeVotes === 1 ? `  ${safeVotes} safe vote` : `  ${safeVotes} safe votes`;
+                      } else if (unsafeVotes > safeVotes) {
+                        return unsafeVotes === 1 ? `  ${unsafeVotes} unsafe vote` : `  ${unsafeVotes} unsafe votes`;
+                      } else {
+                        // Equal votes, show safe votes by default
+                        return safeVotes === 1 ? `  ${safeVotes} safe vote` : `  ${safeVotes} safe votes`;
+                      }
+                    })()}
+              </ThemedText>
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+
+        {/* Open Link Button - positioned absolutely on the right side */}
+        {showOpenButton && !isSelectMode && (
+          <TouchableOpacity
+            style={styles.historyActionButton}
+            onPress={handleOpenLink}
+            activeOpacity={0.7}
+          >
+            <SymbolView
+              name="arrow.up.forward"
+              size={18}
+              type="monochrome"
+              tintColor="#00AA00"
+              fallback={<ThemedText style={styles.historyActionButtonIcon}>↗</ThemedText>}
+            />
+            <Text style={styles.historyActionButtonText}>Open</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     );
   };
 
@@ -2106,6 +2189,39 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
     borderRadius: 8,
+    flex: 1,
+  },
+  //Open Link Button
+  historyItemWrapper: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  historyActionButton: {
+    position: 'absolute',
+    right: 35,
+    top: '65%',
+    transform: [{ translateY: -35 }], // Half of button height
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#d4d4d4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  historyActionButtonIcon: {
+    fontSize: 18,
+    color: '#00AA00',
+  },
+  historyActionButtonText: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: '#333333',
+    marginTop: 1,
   },
   topStatusContainer: {
     flexDirection: 'row',
