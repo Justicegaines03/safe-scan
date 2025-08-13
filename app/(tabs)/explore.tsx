@@ -1261,11 +1261,22 @@ export default function ScanHistoryScreen() {
     const handleOpenLink = (e: any) => {
       e.stopPropagation(); // Prevent triggering the main item press
       const urlToOpen = item.url || item.qrData;
-      if (urlToOpen) {
+      
+      // Check if it's a valid URL that can be opened
+      if (urlToOpen && isOpenableUrl(urlToOpen)) {
         openLink(urlToOpen);
       } else {
-        Alert.alert('Error', 'No URL available to open');
+        // For non-openable content, show an informative message
+        Alert.alert('Cannot Open', 'This content cannot be opened as a link.');
       }
+    };
+
+    const handleRate = (e: any) => {
+      e.stopPropagation(); // Prevent triggering the main item press
+      console.log('Rate button pressed for item:', item.id);
+      setSelectedEntry(item);
+      setUserRating(item.userRating || null);
+      setShowUserRating(true);
     };
 
     // Check if the QR data looks like a URL that can be opened
@@ -1281,11 +1292,11 @@ export default function ScanHistoryScreen() {
              lowerData.includes('.gov');
     };
 
-    const showOpenButton = isOpenableUrl(item.url || item.qrData);
+    const showButtons = !isSelectMode; // Show buttons when not in select mode
 
     return (
       <View style={styles.historyItemWrapper}>
-        <TouchableOpacity
+        <View
           style={[
             styles.historyItem, 
             { 
@@ -1295,21 +1306,25 @@ export default function ScanHistoryScreen() {
               opacity: isSelectMode && !isSelected ? 0.6 : 1
             }
           ]}
-          onPress={handlePress}
-          activeOpacity={0.7}
         >
-          {/* Selection indicator */}
+          {/* Selection indicator - make it clickable in select mode */}
           {isSelectMode && (
-            <View style={styles.selectionIndicator}>
-              <View style={[
-                styles.selectionCircle,
-                { backgroundColor: isSelected ? '#007AFF' : 'transparent' }
-              ]}>
-                {isSelected && (
-                  <ThemedText style={styles.checkmark}>✓</ThemedText>
-                )}
+            <TouchableOpacity 
+              style={styles.selectionIndicatorTouchable}
+              onPress={handlePress}
+              activeOpacity={0.7}
+            >
+              <View style={styles.selectionIndicator}>
+                <View style={[
+                  styles.selectionCircle,
+                  { backgroundColor: isSelected ? '#007AFF' : 'transparent' }
+                ]}>
+                  {isSelected && (
+                    <ThemedText style={styles.checkmark}>✓</ThemedText>
+                  )}
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
 
           {/* Safety status at the top */}
@@ -1346,8 +1361,8 @@ export default function ScanHistoryScreen() {
           </View>
           
           {/* Link/QR Data in the middle */}
-          <ThemedText style={[styles.qrData, showOpenButton && { paddingRight: 90 }]} numberOfLines={1}>
-            {truncateText(getQRDataString(item.qrData), showOpenButton ? 50 : 60)}
+          <ThemedText style={[styles.qrData, showButtons && { paddingRight: 140 }]} numberOfLines={1}>
+            {truncateText(getQRDataString(item.qrData), showButtons ? 40 : 60)}
           </ThemedText>
           
           {/* VirusTotal score and Community votes below the link */}
@@ -1403,24 +1418,56 @@ export default function ScanHistoryScreen() {
               </ThemedText>
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
 
-        {/* Open Link Button - positioned absolutely on the right side */}
-        {showOpenButton && !isSelectMode && (
-          <TouchableOpacity
-            style={styles.historyActionButton}
-            onPress={handleOpenLink}
-            activeOpacity={0.7}
-          >
-            <SymbolView
-              name="arrow.up.forward"
-              size={18}
-              type="monochrome"
-              tintColor="#00AA00"
-              fallback={<ThemedText style={styles.historyActionButtonIcon}>↗</ThemedText>}
-            />
-            <Text style={styles.historyActionButtonText}>Open</Text>
-          </TouchableOpacity>
+        {/* Action Buttons - Rate and Open */}
+        {(() => {
+          console.log('Rendering button container for item:', item.id, 'showButtons:', showButtons, 'isSelectMode:', isSelectMode);
+          return null;
+        })()}
+        {showButtons && (
+          <View style={styles.historyActionButtonsContainer}>
+            
+            {/* Rate Button */}
+            {(() => {
+              console.log('Rate button rendered for item:', item.id);
+              return null;
+            })()}
+            <TouchableOpacity
+              style={styles.historyActionButton}
+              onPress={handleRate}
+              activeOpacity={0.7}
+            >
+              <SymbolView
+                name="star.fill"
+                size={18}
+                type="monochrome"
+                tintColor="#2672ffff"
+                fallback={<ThemedText style={styles.historyActionButtonIcon}>★</ThemedText>}
+              />
+              <Text style={styles.historyActionButtonText}>Rate</Text>
+            </TouchableOpacity>
+
+            {/* Open Link Button */}
+            {(() => {
+              console.log('Open button rendered for item:', item.id);
+              return null;
+            })()}
+            <TouchableOpacity
+              style={styles.historyActionButton}
+              onPress={handleOpenLink}
+              activeOpacity={0.7}
+            >
+                <SymbolView
+                  name="arrow.up.forward"
+                  size={18}
+                  type="monochrome"
+                  tintColor="#00AA00"
+                  fallback={<ThemedText style={styles.historyActionButtonIcon}>↗</ThemedText>}
+                />
+                <Text style={styles.historyActionButtonText}>Open</Text>
+              </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -2197,14 +2244,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   historyActionButton: {
-    position: 'absolute',
-    right: 35,
-    top: '65%',
-    transform: [{ translateY: -35 }], // Half of button height
+    right: 16,
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#d4d4d4',
+    backgroundColor: '#D4D4D4',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -2723,6 +2767,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  selectionIndicatorTouchable: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    zIndex: 2,
+    padding: 4, // Increase touch area
+  },
+  historyActionButtonsContainer: {
+    position: 'absolute',
+    right: 8,
+    top: '50%',
+    transform: [{ translateY: -25 }], // Center vertically
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    zIndex: 10, // Bring buttons to front
   },
   bulkActionContainer: {
     position: 'absolute',
