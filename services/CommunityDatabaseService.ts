@@ -54,20 +54,26 @@ export class CommunityDatabaseService {
 
   /**
    * Add a new vote with spam and abuse detection
+   * Allows users to update their existing vote
    */
   async addVote(vote: Vote): Promise<DatabaseResponse<CommunityRating>> {
     try {
-      // Check for duplicate vote from same user on same QR code
-      if (this.hasDuplicateVote(vote.userId, vote.qrHash)) {
-        return {
-          success: false,
-          error: 'User has already voted on this QR code',
-          timestamp: Date.now()
-        };
+      // Check if user is updating an existing vote
+      const existingVote = this.getExistingUserVote(vote.userId, vote.qrHash);
+      
+      if (existingVote) {
+        // Allow vote update - remove the old vote first
+        console.log('=== UPDATING EXISTING VOTE ===');
+        console.log('Old vote:', existingVote.vote);
+        console.log('New vote:', vote.vote);
+        console.log('==============================');
+        
+        this.removeUserVote(vote.userId, vote.qrHash);
+        // Continue to add the new vote
       }
 
-      // Check for spam patterns
-      if (this.isSpamVoting(vote.userId, vote.timestamp)) {
+      // Check for spam patterns (but allow vote updates)
+      if (!existingVote && this.isSpamVoting(vote.userId, vote.timestamp)) {
         return {
           success: false,
           error: 'Spam voting detected',
@@ -75,8 +81,8 @@ export class CommunityDatabaseService {
         };
       }
 
-      // Check rate limiting
-      if (!this.checkRateLimit(vote.userId, vote.timestamp)) {
+      // Check rate limiting (but allow vote updates)
+      if (!existingVote && !this.checkRateLimit(vote.userId, vote.timestamp)) {
         return {
           success: false,
           error: 'Rate limit exceeded',
@@ -88,7 +94,7 @@ export class CommunityDatabaseService {
       this.recordUserVote(vote);
 
       // Update community rating
-      const updatedRating = await this.updateCommunityRating(vote);
+      const updatedRating = await this.updateCommunityRating(vote, existingVote);
 
       return {
         success: true,
@@ -120,6 +126,23 @@ export class CommunityDatabaseService {
     console.log('============================');
     
     return hasDuplicate;
+  }
+
+  /**
+   * Get existing user vote for a specific QR code
+   */
+  private getExistingUserVote(userId: string, qrHash: string): Vote | null {
+    const userVotes = this.userVoteHistory.get(userId) || [];
+    return userVotes.find(vote => vote.qrHash === qrHash) || null;
+  }
+
+  /**
+   * Remove user's previous vote for a QR code
+   */
+  private removeUserVote(userId: string, qrHash: string): void {
+    const userVotes = this.userVoteHistory.get(userId) || [];
+    const filteredVotes = userVotes.filter(vote => vote.qrHash !== qrHash);
+    this.userVoteHistory.set(userId, filteredVotes);
   }
 
   /**
@@ -174,7 +197,7 @@ export class CommunityDatabaseService {
   /**
    * Update community rating with new vote
    */
-  private async updateCommunityRating(vote: Vote): Promise<CommunityRating> {
+  private async updateCommunityRating(vote: Vote, existingVote?: Vote | null): Promise<CommunityRating> {
     const existingRating = this.ratingsCache.get(vote.qrHash) || {
       qrHash: vote.qrHash,
       safeVotes: 0,
@@ -184,7 +207,17 @@ export class CommunityDatabaseService {
       lastUpdated: vote.timestamp
     };
 
-    // Update vote counts
+    // If updating an existing vote, first subtract the old vote
+    if (existingVote) {
+      if (existingVote.vote === 'safe') {
+        existingRating.safeVotes--;
+      } else {
+        existingRating.unsafeVotes--;
+      }
+      existingRating.totalVotes--;
+    }
+
+    // Add the new vote
     if (vote.vote === 'safe') {
       existingRating.safeVotes++;
     } else {
