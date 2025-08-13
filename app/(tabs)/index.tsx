@@ -560,7 +560,7 @@ export default function CameraScannerScreen() {
   const submitCommunityVote = async (url: string, rating: 'safe' | 'unsafe') => {
     if (!backendInfrastructure) {
       console.error('Backend infrastructure not available for community voting');
-      return;
+      return { success: false, error: 'Backend infrastructure not available', timestamp: Date.now() };
     }
 
     try {
@@ -587,13 +587,16 @@ export default function CameraScannerScreen() {
       } else {
         console.error('Failed to submit community vote:', result.error);
       }
+      
+      return result;
     } catch (error) {
       console.error('Error submitting community vote:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error', timestamp: Date.now() };
     }
   };
 
   // Sync user rating to existing history entry
-  const syncUserRatingToHistory = async (newRating: 'safe' | 'unsafe' | null) => {
+  const syncUserRatingToHistory = async (newRating: 'safe' | 'unsafe' | null, communityData?: { safeVotes: number; totalVotes: number; confidence: number }) => {
     try {
       const STORAGE_KEY = '@safe_scan_history';
       const existingHistory = await AsyncStorage.getItem(STORAGE_KEY);
@@ -613,9 +616,19 @@ export default function CameraScannerScreen() {
           // Update the entry's user rating
           mostRecentEntry.userRating = newRating;
           
+          // Update community data if provided
+          if (communityData) {
+            mostRecentEntry.communityRating = {
+              confidence: communityData.confidence,
+              safeVotes: communityData.safeVotes,
+              unsafeVotes: communityData.totalVotes - communityData.safeVotes
+            };
+            console.log('Updated community data in history entry:', mostRecentEntry.communityRating);
+          }
+          
           // Save back to storage
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-          console.log('User rating synced successfully to entry:', mostRecentEntry.id);
+          console.log('User rating and community data synced successfully to entry:', mostRecentEntry.id);
         }
       }
     } catch (error) {
@@ -992,11 +1005,35 @@ export default function CameraScannerScreen() {
                         const newRating = userRating === 'safe' ? null : 'safe';
                         setUserRating(newRating);
                         console.log('User rated QR code as:', newRating || 'deselected');
-                        // Sync the rating to the already-saved history entry
-                        syncUserRatingToHistory(newRating);
+                        
                         // Submit to community database if rating is not null
                         if (newRating && validationResult?.url) {
-                          submitCommunityVote(validationResult.url, newRating);
+                          submitCommunityVote(validationResult.url, newRating).then((result) => {
+                            // Update validation result with new community data
+                            if (result.success && result.data) {
+                              setValidationResult(prev => prev ? {
+                                ...prev,
+                                community: {
+                                  safeVotes: result.data!.safeVotes,
+                                  totalVotes: result.data!.totalVotes,
+                                  communityConfidence: result.data!.confidence
+                                }
+                              } : null);
+                              
+                              // Sync the rating and community data to the already-saved history entry
+                              syncUserRatingToHistory(newRating, {
+                                safeVotes: result.data!.safeVotes,
+                                totalVotes: result.data!.totalVotes,
+                                confidence: result.data!.confidence
+                              });
+                            } else {
+                              // Sync just the rating if community vote failed
+                              syncUserRatingToHistory(newRating);
+                            }
+                          });
+                        } else {
+                          // Sync the rating to the already-saved history entry
+                          syncUserRatingToHistory(newRating);
                         }
                         // Auto-hide after selection
                         setTimeout(() => setShowUserRating(false));
@@ -1026,11 +1063,35 @@ export default function CameraScannerScreen() {
                         const newRating = userRating === 'unsafe' ? null : 'unsafe';
                         setUserRating(newRating);
                         console.log('User rated QR code as:', newRating || 'deselected');
-                        // Sync the rating to the already-saved history entry
-                        syncUserRatingToHistory(newRating);
+                        
                         // Submit to community database if rating is not null
                         if (newRating && validationResult?.url) {
-                          submitCommunityVote(validationResult.url, newRating);
+                          submitCommunityVote(validationResult.url, newRating).then((result) => {
+                            // Update validation result with new community data
+                            if (result.success && result.data) {
+                              setValidationResult(prev => prev ? {
+                                ...prev,
+                                community: {
+                                  safeVotes: result.data!.safeVotes,
+                                  totalVotes: result.data!.totalVotes,
+                                  communityConfidence: result.data!.confidence
+                                }
+                              } : null);
+                              
+                              // Sync the rating and community data to the already-saved history entry
+                              syncUserRatingToHistory(newRating, {
+                                safeVotes: result.data!.safeVotes,
+                                totalVotes: result.data!.totalVotes,
+                                confidence: result.data!.confidence
+                              });
+                            } else {
+                              // Sync just the rating if community vote failed
+                              syncUserRatingToHistory(newRating);
+                            }
+                          });
+                        } else {
+                          // Sync the rating to the already-saved history entry
+                          syncUserRatingToHistory(newRating);
                         }
                         // Auto-hide after selection
                         setTimeout(() => setShowUserRating(false));

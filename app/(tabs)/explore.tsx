@@ -497,7 +497,7 @@ export default function ScanHistoryScreen() {
   const submitCommunityVote = async (url: string, rating: 'safe' | 'unsafe') => {
     if (!backendInfrastructure) {
       console.error('Backend infrastructure not available for community voting');
-      return;
+      return { success: false, error: 'Backend infrastructure not available', timestamp: Date.now() };
     }
 
     try {
@@ -524,8 +524,11 @@ export default function ScanHistoryScreen() {
       } else {
         console.error('Failed to submit community vote:', result.error);
       }
+      
+      return result;
     } catch (error) {
       console.error('Error submitting community vote:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error', timestamp: Date.now() };
     }
   };
 
@@ -552,7 +555,24 @@ export default function ScanHistoryScreen() {
     // Submit to community database if rating is not null and we have a URL
     if (newTag && entryToUpdate && (entryToUpdate.url || entryToUpdate.qrData)) {
       const urlToUse = entryToUpdate.url || entryToUpdate.qrData;
-      submitCommunityVote(urlToUse, newTag);
+      const result = await submitCommunityVote(urlToUse, newTag);
+      
+      // Update the entry with new community data if vote was successful
+      if (result.success && result.data) {
+        const finalUpdatedHistory = updatedHistory.map(entry => 
+          entry.id === entryId ? { 
+            ...entry, 
+            communityRating: {
+              confidence: result.data!.confidence,
+              safeVotes: result.data!.safeVotes,
+              unsafeVotes: result.data!.unsafeVotes
+            }
+          } : entry
+        );
+        setHistory(finalUpdatedHistory);
+        await updateHistory(finalUpdatedHistory);
+        console.log('Community rating updated in history entry');
+      }
     }
     
     setEditingTag(null);
@@ -567,7 +587,7 @@ export default function ScanHistoryScreen() {
     // Get the entries before updating for community voting
     const entriesToUpdate = history.filter(entry => entryIds.includes(entry.id));
     
-    const updatedHistory = history.map(entry => 
+    let updatedHistory = history.map(entry => 
       entryIds.includes(entry.id) ? { ...entry, userRating: newTag } : entry
     );
     
@@ -580,9 +600,28 @@ export default function ScanHistoryScreen() {
       for (const entry of entriesToUpdate) {
         if (entry.url || entry.qrData) {
           const urlToUse = entry.url || entry.qrData;
-          submitCommunityVote(urlToUse, newTag);
+          const result = await submitCommunityVote(urlToUse, newTag);
+          
+          // Update the entry with new community data if vote was successful
+          if (result.success && result.data) {
+            updatedHistory = updatedHistory.map(historyEntry => 
+              historyEntry.id === entry.id ? { 
+                ...historyEntry, 
+                communityRating: {
+                  confidence: result.data!.confidence,
+                  safeVotes: result.data!.safeVotes,
+                  unsafeVotes: result.data!.unsafeVotes
+                }
+              } : historyEntry
+            );
+          }
         }
       }
+      
+      // Save the final updated history with community data
+      setHistory(updatedHistory);
+      await updateHistory(updatedHistory);
+      console.log('Community ratings updated for bulk entries');
     }
     
     setShowUserRating(false);
