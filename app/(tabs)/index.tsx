@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { 
   StyleSheet, 
   View, 
@@ -1103,7 +1104,7 @@ export default function CameraScannerScreen() {
             </View>
             <TouchableOpacity 
               style={styles.settingsButton}
-              onPress={() => setShowSettings(true)}
+              onPress={() => router.push('/settings')}
             >
               <SymbolView 
                 name="gear" 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { router } from 'expo-router';
 import {
   StyleSheet,
   View,
@@ -1903,7 +1904,7 @@ export default function ScanHistoryScreen() {
     >
       <ThemedView style={styles.modalContainer}>
         <ScrollView style={styles.detailsContent}>
-          <View style={styles.detailsHeader}>
+          <ThemedView style={styles.detailsHeader}>
             <View style={styles.headerSpacer} />
             <ThemedText type="subtitle" style={styles.centeredTitle}>Settings</ThemedText>
             <TouchableOpacity
@@ -1912,13 +1913,25 @@ export default function ScanHistoryScreen() {
             >
               <ThemedText style={styles.doneButtonText}>Done</ThemedText>
             </TouchableOpacity>
-          </View>
+          </ThemedView>
 
           {/* Data Export Section */}
-          <ThemedText style={styles.firstSectionTitle}>Data Export</ThemedText>
+          <ThemedText style={[
+            styles.firstSectionTitle,
+            {
+              backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#f5f5f5',
+              color: colorScheme === 'dark' ? '#999999' : '#666666',
+            }
+          ]}>Data Export</ThemedText>
           
           <TouchableOpacity
-            style={styles.settingsListItem}
+            style={[
+              styles.settingsListItem,
+              {
+                borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+                backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+              }
+            ]}
             onPress={exportToCSV}
           >
             <View style={styles.settingsItemContent}>
@@ -1933,7 +1946,13 @@ export default function ScanHistoryScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.settingsListItem}
+            style={[
+              styles.settingsListItem,
+              {
+                borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+                backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+              }
+            ]}
             onPress={exportToJSON}
           >
             <View style={styles.settingsItemContent}>
@@ -1948,10 +1967,22 @@ export default function ScanHistoryScreen() {
           </TouchableOpacity>
 
           {/* Data Management Section */}
-          <ThemedText style={styles.settingsSectionTitle}>Data Management</ThemedText>
+          <ThemedText style={[
+            styles.settingsSectionTitle,
+            {
+              backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#f5f5f5',
+              color: colorScheme === 'dark' ? '#999999' : '#666666',
+            }
+          ]}>Data Management</ThemedText>
           
           <TouchableOpacity
-            style={styles.settingsListItem}
+            style={[
+              styles.settingsListItem,
+              {
+                borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+                backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+              }
+            ]}
             onPress={getStorageInfo}
           >
             <View style={styles.settingsItemContent}>
@@ -1966,7 +1997,13 @@ export default function ScanHistoryScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.settingsListItem}
+            style={[
+              styles.settingsListItem,
+              {
+                borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+                backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+              }
+            ]}
             onPress={() => {
               clearHistory();
             }}
@@ -1983,7 +2020,13 @@ export default function ScanHistoryScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.settingsListItem}
+            style={[
+              styles.settingsListItem,
+              {
+                borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+                backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+              }
+            ]}
             onPress={() => {
               importMockScans();
             }}
@@ -2000,10 +2043,22 @@ export default function ScanHistoryScreen() {
           </TouchableOpacity>
 
           {/* Privacy Section */}
-          <ThemedText style={styles.settingsSectionTitle}>Privacy</ThemedText>
+          <ThemedText style={[
+            styles.settingsSectionTitle,
+            {
+              backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#f5f5f5',
+              color: colorScheme === 'dark' ? '#999999' : '#666666',
+            }
+          ]}>Privacy</ThemedText>
           
           <TouchableOpacity
-            style={styles.settingsListItem}
+            style={[
+              styles.settingsListItem,
+              {
+                borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+                backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+              }
+            ]}
             onPress={() => {
               Alert.alert(
                 'Privacy Information',
@@ -2076,7 +2131,7 @@ export default function ScanHistoryScreen() {
           style={styles.settingsButton}
           onPress={() => {
             console.log('Settings button pressed');
-            setShowSettings(true);
+            router.push('/settings');
           }}
         >
           <SymbolView 
@@ -2537,7 +2592,6 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   detailsContent: {
     flex: 1,
@@ -2579,7 +2633,6 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
   },
   qrContent: {
     marginTop: 8,
@@ -2663,8 +2716,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#f5f5f5',
-    color: '#666666',
   },
   firstSectionTitle: {
     fontSize: 16,
@@ -2673,8 +2724,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#f5f5f5',
-    color: '#666666',
   },
   settingsOptionButton: {
     padding: 16,
@@ -2718,10 +2767,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#ffffff',
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   infoLabel: {
     fontSize: 14,
@@ -2753,8 +2800,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#E5E5E7',
-    backgroundColor: '#ffffff',
   },
   settingsItemContent: {
     flexDirection: 'row',

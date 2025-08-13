@@ -1,12 +1,41 @@
 import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert, Platform, Share } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert, Platform, Share, Image } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { SymbolView } from 'expo-symbols';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
+import { userIdentityService } from '@/services/UserIdentityService';
+
+interface ScanHistoryEntry {
+  id: string;
+  scanDuration?: number;
+  timestamp: number;
+  qrData: string;
+  virusTotalResult?: {
+    isSecure: boolean;
+    positives: number;
+    total: number;
+    scanId: string;
+    permalink: string;
+  };
+  safetyStatus: 'safe' | 'unsafe' | 'unknown';
+  communityRating?: {
+    confidence: number;
+    safeVotes: number;
+    unsafeVotes: number;
+  };
+  url?: string;
+  userRating?: 'safe' | 'unsafe' | null;
+  userOverride?: boolean;
+  isMockData?: boolean;
+}
 
 export default function SettingsScreen() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const STORAGE_KEY = '@safe_scan_history';
 
   const getHistoryFromStorage = async () => {
@@ -133,79 +162,266 @@ export default function SettingsScreen() {
     );
   };
 
+  const generateMockHistory = (): ScanHistoryEntry[] => {
+    console.log('Generating mock history data for user education');
+    const now = Date.now();
+    const mockEntries: ScanHistoryEntry[] = [
+      {
+        id: '1',
+        qrData: 'https://www.google.com',
+        url: 'https://www.google.com',
+        timestamp: now - 300000, // 5 minutes ago
+        safetyStatus: 'safe',
+        virusTotalResult: { 
+          isSecure: true, 
+          positives: 0, 
+          total: 72, 
+          scanId: 'scan1',
+          permalink: 'https://virustotal.com/scan1'
+        },
+        communityRating: {
+          confidence: 0.98,
+          safeVotes: 45,
+          unsafeVotes: 1
+        },
+        userRating: null,
+        scanDuration: 1200,
+        isMockData: true
+      },
+      {
+        id: '2',
+        qrData: 'http://malicious-phishing-site.com/steal-data',
+        url: 'http://malicious-phishing-site.com/steal-data',
+        timestamp: now - 1800000, // 30 minutes ago
+        safetyStatus: 'unsafe',
+        virusTotalResult: { 
+          isSecure: false, 
+          positives: 28, 
+          total: 70,
+          scanId: 'scan2',
+          permalink: 'https://virustotal.com/scan2'
+        },
+        communityRating: {
+          confidence: 0.15,
+          safeVotes: 1,
+          unsafeVotes: 12
+        },
+        userRating: null,
+        scanDuration: 2800,
+        isMockData: true
+      },
+      {
+        id: '3',
+        qrData: 'WiFi:T:WPA;S:CoffeeShop_Free;P:password123;H:false;;',
+        timestamp: now - 3600000, // 1 hour ago
+        safetyStatus: 'unknown',
+        scanDuration: 450,
+        isMockData: true
+      }
+    ];
+    
+    return mockEntries;
+  };
+
+  const importMockScans = () => {
+    console.log('Import mock scans requested');
+    Alert.alert(
+      'Import Mock Scans',
+      'This will add sample scan data for demonstration purposes. Mock scans will be clearly labeled with a "Mock" tag.',
+      [
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => console.log('Import mock scans cancelled by user')
+        },
+        {
+          text: 'Import',
+          onPress: async () => {
+            console.log('User confirmed import mock scans');
+            try {
+              const mockData = generateMockHistory();
+              console.log('Generated mock data entries:', mockData.length);
+              
+              // Load existing history
+              const existingData = await AsyncStorage.getItem(STORAGE_KEY);
+              const existingHistory: ScanHistoryEntry[] = existingData ? JSON.parse(existingData) : [];
+              
+              // Filter out any existing mock data to avoid duplicates
+              const realScans = existingHistory.filter(entry => !entry.isMockData);
+              
+              // Combine real scans with new mock data
+              const combinedHistory = [...realScans, ...mockData];
+              combinedHistory.sort((a, b) => b.timestamp - a.timestamp);
+              
+              // Save to storage
+              await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(combinedHistory));
+              
+              console.log('Mock scans imported successfully, total entries:', combinedHistory.length);
+              Alert.alert('Success', `Imported ${mockData.length} mock scans for demonstration`);
+            } catch (error) {
+              console.log('Error importing mock scans:', error);
+              Alert.alert('Error', 'Failed to import mock scans');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <ThemedView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerSpacer} />
+        <ThemedText style={styles.mainTitle}>Settings</ThemedText>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.doneButton}
+        >
+          <ThemedText style={styles.doneButtonText}>Done</ThemedText>
+        </TouchableOpacity>
+      </View>
+      
       <ScrollView style={styles.content}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <SymbolView name="chevron.left" size={24} tintColor="#007AFF" />
-          </TouchableOpacity>
-          <ThemedText type="title" style={styles.title}>Settings</ThemedText>
-          <View style={styles.headerSpacer} />
-        </View>
-
         {/* Data Export Section */}
-        <ThemedText style={styles.sectionTitle}>Data Export</ThemedText>
+        <ThemedText style={[
+          styles.firstSectionTitle,
+          {
+            backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#f5f5f5',
+            color: colorScheme === 'dark' ? '#999999' : '#666666',
+          }
+        ]}>Data Export</ThemedText>
         
-        <TouchableOpacity style={styles.listItem} onPress={exportToCSV}>
-          <View style={styles.itemContent}>
-            <View style={styles.itemTextContainer}>
-              <ThemedText style={styles.itemTitle}>Export as CSV</ThemedText>
-              <ThemedText style={styles.itemSubtitle}>
+        <TouchableOpacity 
+          style={[
+            styles.settingsListItem,
+            {
+              borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+            }
+          ]} 
+          onPress={exportToCSV}
+        >
+          <View style={styles.settingsItemContent}>
+            <View style={styles.settingsItemTextContainer}>
+              <ThemedText style={styles.settingsItemTitle}>Export as CSV</ThemedText>
+              <ThemedText style={styles.settingsItemSubtitle}>
                 Download scan history in spreadsheet format
               </ThemedText>
             </View>
-            <ThemedText style={styles.chevron}>›</ThemedText>
+            <ThemedText style={styles.chevronText}>›</ThemedText>
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.listItem} onPress={exportToJSON}>
-          <View style={styles.itemContent}>
-            <View style={styles.itemTextContainer}>
-              <ThemedText style={styles.itemTitle}>Export as JSON</ThemedText>
-              <ThemedText style={styles.itemSubtitle}>
+        <TouchableOpacity 
+          style={[
+            styles.settingsListItem,
+            {
+              borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+            }
+          ]} 
+          onPress={exportToJSON}
+        >
+          <View style={styles.settingsItemContent}>
+            <View style={styles.settingsItemTextContainer}>
+              <ThemedText style={styles.settingsItemTitle}>Export as JSON</ThemedText>
+              <ThemedText style={styles.settingsItemSubtitle}>
                 Download full data with metadata
               </ThemedText>
             </View>
-            <ThemedText style={styles.chevron}>›</ThemedText>
+            <ThemedText style={styles.chevronText}>›</ThemedText>
           </View>
         </TouchableOpacity>
 
         {/* Data Management Section */}
-        <ThemedText style={styles.sectionTitle}>Data Management</ThemedText>
+        <ThemedText style={[
+          styles.settingsSectionTitle,
+          {
+            backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#f5f5f5',
+            color: colorScheme === 'dark' ? '#999999' : '#666666',
+          }
+        ]}>Data Management</ThemedText>
         
-        <TouchableOpacity style={styles.listItem} onPress={getStorageInfo}>
-          <View style={styles.itemContent}>
-            <View style={styles.itemTextContainer}>
-              <ThemedText style={styles.itemTitle}>Storage Information</ThemedText>
-              <ThemedText style={styles.itemSubtitle}>
+        <TouchableOpacity 
+          style={[
+            styles.settingsListItem,
+            {
+              borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+            }
+          ]} 
+          onPress={getStorageInfo}
+        >
+          <View style={styles.settingsItemContent}>
+            <View style={styles.settingsItemTextContainer}>
+              <ThemedText style={styles.settingsItemTitle}>Storage Information</ThemedText>
+              <ThemedText style={styles.settingsItemSubtitle}>
                 View data usage and statistics
               </ThemedText>
             </View>
-            <ThemedText style={styles.chevron}>›</ThemedText>
+            <ThemedText style={styles.chevronText}>›</ThemedText>
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.listItem} onPress={clearHistory}>
-          <View style={styles.itemContent}>
-            <View style={styles.itemTextContainer}>
-              <ThemedText style={styles.itemTitle}>Clear All History</ThemedText>
-              <ThemedText style={styles.itemSubtitle}>
+        <TouchableOpacity 
+          style={[
+            styles.settingsListItem,
+            {
+              borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+            }
+          ]} 
+          onPress={clearHistory}
+        >
+          <View style={styles.settingsItemContent}>
+            <View style={styles.settingsItemTextContainer}>
+              <ThemedText style={styles.settingsItemTitle}>Clear All History</ThemedText>
+              <ThemedText style={styles.settingsItemSubtitle}>
                 Permanently delete all scan records
               </ThemedText>
             </View>
-            <ThemedText style={styles.chevron}>›</ThemedText>
+            <ThemedText style={styles.chevronText}>›</ThemedText>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[
+            styles.settingsListItem,
+            {
+              borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+            }
+          ]} 
+          onPress={importMockScans}
+        >
+          <View style={styles.settingsItemContent}>
+            <View style={styles.settingsItemTextContainer}>
+              <ThemedText style={styles.settingsItemTitle}>Import Mock Scans</ThemedText>
+              <ThemedText style={styles.settingsItemSubtitle}>
+                Add sample scan data for demonstration
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.chevronText}>›</ThemedText>
           </View>
         </TouchableOpacity>
 
         {/* Privacy Section */}
-        <ThemedText style={styles.sectionTitle}>Privacy</ThemedText>
+        <ThemedText style={[
+          styles.settingsSectionTitle,
+          {
+            backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#f5f5f5',
+            color: colorScheme === 'dark' ? '#999999' : '#666666',
+          }
+        ]}>Privacy</ThemedText>
         
         <TouchableOpacity
-          style={styles.listItem}
+          style={[
+            styles.settingsListItem,
+            {
+              borderBottomColor: colorScheme === 'dark' ? '#333333' : '#E5E5E7',
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#ffffff',
+            }
+          ]}
           onPress={() => {
             Alert.alert(
               'Privacy Information',
@@ -214,16 +430,30 @@ export default function SettingsScreen() {
             );
           }}
         >
-          <View style={styles.itemContent}>
-            <View style={styles.itemTextContainer}>
-              <ThemedText style={styles.itemTitle}>Privacy Policy</ThemedText>
-              <ThemedText style={styles.itemSubtitle}>
+          <View style={styles.settingsItemContent}>
+            <View style={styles.settingsItemTextContainer}>
+              <ThemedText style={styles.settingsItemTitle}>Privacy Policy</ThemedText>
+              <ThemedText style={styles.settingsItemSubtitle}>
                 How we handle your data
               </ThemedText>
             </View>
-            <ThemedText style={styles.chevron}>›</ThemedText>
+            <ThemedText style={styles.chevronText}>›</ThemedText>
           </View>
         </TouchableOpacity>
+
+        {/* Logo and Version Footer */}
+        <View style={styles.logoFooter}>
+          <View style={styles.footerLogoContainer}>
+            <Image 
+              source={require('@/assets/images/Icon-Light.png')}
+              style={styles.footerLogoImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.versionContainer}>
+            <ThemedText style={styles.versionText}>Version 1.0.0</ThemedText>
+          </View>
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -233,66 +463,105 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    paddingVertical: 16,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingBottom: 10,
     paddingHorizontal: 16,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerSpacer: {
+    width: 60,
   },
-  title: {
+  mainTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     textAlign: 'center',
     flex: 1,
   },
-  headerSpacer: {
-    width: 44,
+  doneButton: {
+    padding: 8,
+    width: 60,
+    alignItems: 'center',
   },
-  sectionTitle: {
+  doneButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  content: {
+    flex: 1,
+    paddingVertical: 16,
+  },
+  firstSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    marginTop: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  settingsSectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
     marginTop: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    color: '#666666',
   },
-  listItem: {
+  settingsListItem: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#E5E5E7',
   },
-  itemContent: {
+  settingsItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  itemTextContainer: {
+  settingsItemTextContainer: {
     flex: 1,
   },
-  itemTitle: {
+  settingsItemTitle: {
     fontSize: 16,
     fontWeight: 'normal',
     marginBottom: 2,
   },
-  itemSubtitle: {
+  settingsItemSubtitle: {
     fontSize: 13,
     opacity: 0.6,
     lineHeight: 18,
   },
-  chevron: {
+  chevronText: {
     fontSize: 18,
     opacity: 0.4,
     fontWeight: '300',
+  },
+  logoFooter: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginTop: 20,
+  },
+  footerLogoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  footerLogoImage: {
+    width: 60,
+    height: 60,
+  },
+  logoPlaceholder: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+  },
+  versionContainer: {
+    alignItems: 'center',
+  },
+  versionText: {
+    fontSize: 16,
+    fontWeight: 'normal',
+    opacity: 0.6,
   },
 });
