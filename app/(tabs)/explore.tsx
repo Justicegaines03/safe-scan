@@ -1184,9 +1184,19 @@ export default function ScanHistoryScreen() {
             <ThemedText style={styles.communityCardText}>
               {!item.communityRating || item.communityRating.safeVotes + item.communityRating.unsafeVotes === 0 
                 ? '  No votes yet' 
-                : item.communityRating.safeVotes === 1 
-                  ? `  ${item.communityRating.safeVotes} safe vote`
-                  : `  ${item.communityRating.safeVotes} safe votes`}
+                : (() => {
+                    const safeVotes = item.communityRating.safeVotes || 0;
+                    const unsafeVotes = item.communityRating.unsafeVotes || 0;
+                    
+                    if (safeVotes > unsafeVotes) {
+                      return safeVotes === 1 ? `  ${safeVotes} safe vote` : `  ${safeVotes} safe votes`;
+                    } else if (unsafeVotes > safeVotes) {
+                      return unsafeVotes === 1 ? `  ${unsafeVotes} unsafe vote` : `  ${unsafeVotes} unsafe votes`;
+                    } else {
+                      // Equal votes, show safe votes by default
+                      return safeVotes === 1 ? `  ${safeVotes} safe vote` : `  ${safeVotes} safe votes`;
+                    }
+                  })()}
             </ThemedText>
           </View>
         </View>

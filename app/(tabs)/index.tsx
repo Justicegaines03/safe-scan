@@ -1033,9 +1033,19 @@ export default function CameraScannerScreen() {
                   ]}>
                     {!validationResult.community || validationResult.community.totalVotes === 0 
                       ? '  No votes yet' 
-                      : validationResult.community.safeVotes === 1
-                      ? '  1 safe vote'
-                      : `  ${validationResult.community.safeVotes || 0} safe votes`}
+                      : (() => {
+                          const safeVotes = validationResult.community.safeVotes || 0;
+                          const unsafeVotes = (validationResult.community.totalVotes || 0) - safeVotes;
+                          
+                          if (safeVotes > unsafeVotes) {
+                            return safeVotes === 1 ? '  1 safe vote' : `  ${safeVotes} safe votes`;
+                          } else if (unsafeVotes > safeVotes) {
+                            return unsafeVotes === 1 ? '  1 unsafe vote' : `  ${unsafeVotes} unsafe votes`;
+                          } else {
+                            // Equal votes, show safe votes by default
+                            return safeVotes === 1 ? '  1 safe vote' : `  ${safeVotes} safe votes`;
+                          }
+                        })()}
                   </ThemedText>
                 </ThemedView>
               </ThemedView>
