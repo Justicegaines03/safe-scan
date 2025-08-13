@@ -57,6 +57,15 @@ export class CommunityDatabaseService {
    */
   async addVote(vote: Vote): Promise<DatabaseResponse<CommunityRating>> {
     try {
+      // Check for duplicate vote from same user on same QR code
+      if (this.hasDuplicateVote(vote.userId, vote.qrHash)) {
+        return {
+          success: false,
+          error: 'User has already voted on this QR code',
+          timestamp: Date.now()
+        };
+      }
+
       // Check for spam patterns
       if (this.isSpamVoting(vote.userId, vote.timestamp)) {
         return {
@@ -93,6 +102,24 @@ export class CommunityDatabaseService {
         timestamp: Date.now()
       };
     }
+  }
+
+  /**
+   * Check if user has already voted on this QR code
+   */
+  private hasDuplicateVote(userId: string, qrHash: string): boolean {
+    const userVotes = this.userVoteHistory.get(userId) || [];
+    const hasDuplicate = userVotes.some(vote => vote.qrHash === qrHash);
+    
+    console.log('=== DUPLICATE VOTE CHECK ===');
+    console.log('User ID:', userId);
+    console.log('QR Hash:', qrHash);
+    console.log('User vote history length:', userVotes.length);
+    console.log('Previous votes for this QR:', userVotes.filter(vote => vote.qrHash === qrHash).length);
+    console.log('Has duplicate:', hasDuplicate);
+    console.log('============================');
+    
+    return hasDuplicate;
   }
 
   /**

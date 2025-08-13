@@ -31,6 +31,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { SymbolView } from 'expo-symbols';
 import Constants from 'expo-constants';
 import { backendInfrastructure } from '@/services';
+import { userIdentityService } from '@/services/UserIdentityService';
 
 
 // Simple hash function that works in React Native for the  Web Crypto API
@@ -567,8 +568,15 @@ export default function CameraScannerScreen() {
       // Create QR hash for the community database
       const qrHash = await hashUrl(url);
       
-      // Generate a simple user ID (in production, this would be a proper user identifier)
-      const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+      // Get persistent user ID instead of generating random one
+      const userId = await userIdentityService.getUserId();
+      
+      console.log('=== VOTE SUBMISSION DEBUG ===');
+      console.log('URL:', url);
+      console.log('Rating:', rating);
+      console.log('User ID:', userId);
+      console.log('QR Hash:', qrHash);
+      console.log('============================');
       
       const vote = {
         userId: userId,
@@ -585,7 +593,16 @@ export default function CameraScannerScreen() {
         console.log('Updated community rating:', result.data);
         console.log(`Safe votes: ${result.data.safeVotes}, Unsafe votes: ${result.data.unsafeVotes}, Total: ${result.data.totalVotes}`);
       } else {
-        console.error('Failed to submit community vote:', result.error);
+        console.log('Failed to submit community vote:', result.error);
+        
+        // Show user-friendly error message for duplicate votes
+        if (result.error?.includes('already voted')) {
+          Alert.alert(
+            'Already Rated',
+            'You have already rated this QR code. Each user can only rate a QR code once to ensure fair community ratings.',
+            [{ text: 'OK' }]
+          );
+        }
       }
       
       return result;
@@ -764,6 +781,10 @@ export default function CameraScannerScreen() {
       const keys = await AsyncStorage.getAllKeys();
       const safeScanKeys = keys.filter(key => key.includes('safe_scan'));
       
+      // Get user ID debug info
+      const userDebugInfo = await userIdentityService.getDebugInfo();
+      const currentUserId = await userIdentityService.getUserId();
+      
       let totalSize = 0;
       for (const key of safeScanKeys) {
         const value = await AsyncStorage.getItem(key);
@@ -776,7 +797,7 @@ export default function CameraScannerScreen() {
       
       Alert.alert(
         'Storage Information',
-        `History Entries: ${history.length}\nStorage Keys: ${safeScanKeys.length}\nApproximate Size: ${sizeInKB} KB\n\nOldest Entry: ${history.length > 0 ? new Date(Math.min(...history.map((h: any) => h.timestamp))).toLocaleDateString() : 'None'}\nNewest Entry: ${history.length > 0 ? new Date(Math.max(...history.map((h: any) => h.timestamp))).toLocaleDateString() : 'None'}`
+        `History Entries: ${history.length}\nStorage Keys: ${safeScanKeys.length}\nApproximate Size: ${sizeInKB} KB\n\nUser ID: ${currentUserId}\nCached ID: ${userDebugInfo.cachedId || 'None'}\nPrimary Stored: ${userDebugInfo.primaryStored ? 'Yes' : 'No'}\nBackup Stored: ${userDebugInfo.backupStored ? 'Yes' : 'No'}\n\nOldest Entry: ${history.length > 0 ? new Date(Math.min(...history.map((h: any) => h.timestamp))).toLocaleDateString() : 'None'}\nNewest Entry: ${history.length > 0 ? new Date(Math.max(...history.map((h: any) => h.timestamp))).toLocaleDateString() : 'None'}`
       );
     } catch (error) {
       Alert.alert('Error', 'Failed to retrieve storage information');
@@ -798,6 +819,28 @@ export default function CameraScannerScreen() {
               Alert.alert('Success', 'All scan history has been cleared');
             } catch (error) {
               Alert.alert('Error', 'Failed to clear history');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const resetUserId = () => {
+    Alert.alert(
+      'Reset User ID',
+      'This will reset your device user ID for testing duplicate vote prevention. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const newUserId = await userIdentityService.resetUserId();
+              Alert.alert('Success', `User ID reset. New ID: ${newUserId}`);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reset user ID');
             }
           }
         }
@@ -978,7 +1021,9 @@ export default function CameraScannerScreen() {
                     { color: '#FFFFFF' }
                   ]}>
                     {!validationResult.community || validationResult.community.totalVotes === 0 
-                      ? '  No votes' 
+                      ? '  No votes yet' 
+                      : validationResult.community.safeVotes === 1
+                      ? '  1 safe vote'
                       : `  ${validationResult.community.safeVotes || 0} safe votes`}
                   </ThemedText>
                 </ThemedView>
@@ -1335,6 +1380,23 @@ export default function CameraScannerScreen() {
                   <ThemedText style={styles.settingsItemTitle}>Clear All History</ThemedText>
                   <ThemedText style={styles.settingsItemSubtitle}>
                     Permanently delete all scan records
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.chevronText}>›</ThemedText>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingsListItem}
+              onPress={() => {
+                resetUserId();
+              }}
+            >
+              <View style={styles.settingsItemContent}>
+                <View style={styles.settingsItemTextContainer}>
+                  <ThemedText style={styles.settingsItemTitle}>Reset User ID (Testing)</ThemedText>
+                  <ThemedText style={styles.settingsItemSubtitle}>
+                    Reset device user ID for duplicate rating testing
                   </ThemedText>
                 </View>
                 <ThemedText style={styles.chevronText}>›</ThemedText>

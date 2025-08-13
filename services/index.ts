@@ -11,3 +11,4 @@ export { WebSocketService } from './WebSocketService';
 export { CacheService } from './CacheService';
 export { ErrorHandlingService } from './ErrorHandlingService';
 export { BackendInfrastructureService, backendInfrastructure } from './BackendInfrastructureService';
+export { UserIdentityService, userIdentityService } from './UserIdentityService';

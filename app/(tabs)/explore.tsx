@@ -22,6 +22,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { backendInfrastructure } from '@/services';
+import { userIdentityService } from '@/services/UserIdentityService';
 
 // Types
 interface ScanHistoryEntry {
@@ -504,8 +505,15 @@ export default function ScanHistoryScreen() {
       // Create QR hash for the community database
       const qrHash = await hashUrl(url);
       
-      // Generate a simple user ID (in production, this would be a proper user identifier)
-      const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+      // Get persistent user ID instead of generating random one
+      const userId = await userIdentityService.getUserId();
+      
+      console.log('=== VOTE SUBMISSION DEBUG (History Tab) ===');
+      console.log('URL:', url);
+      console.log('Rating:', rating);
+      console.log('User ID:', userId);
+      console.log('QR Hash:', qrHash);
+      console.log('==========================================');
       
       const vote = {
         userId: userId,
@@ -523,6 +531,15 @@ export default function ScanHistoryScreen() {
         console.log(`Safe votes: ${result.data.safeVotes}, Unsafe votes: ${result.data.unsafeVotes}, Total: ${result.data.totalVotes}`);
       } else {
         console.error('Failed to submit community vote:', result.error);
+        
+        // Show user-friendly error message for duplicate votes
+        if (result.error?.includes('already voted')) {
+          Alert.alert(
+            'Already Rated',
+            'You have already rated this QR code. Each user can only rate a QR code once to ensure fair community ratings.',
+            [{ text: 'OK' }]
+          );
+        }
       }
       
       return result;
