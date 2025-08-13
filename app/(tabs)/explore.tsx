@@ -195,7 +195,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 45,
           unsafeVotes: 1
         },
-        userRating: 'safe',
+        userRating: null,
         scanDuration: 1200,
         isMockData: true // Add flag to identify mock data
       },
@@ -217,7 +217,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 1,
           unsafeVotes: 12
         },
-        userRating: 'unsafe',
+        userRating: null,
         scanDuration: 2800,
         isMockData: true
       },
@@ -253,7 +253,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 23,
           unsafeVotes: 2
         },
-        userRating: 'safe',
+        userRating: null,
         scanDuration: 980,
         isMockData: true
       },
@@ -267,7 +267,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 8,
           unsafeVotes: 1
         },
-        userRating: 'safe',
+        userRating: null,
         scanDuration: 450,
         isMockData: true
       },
@@ -311,7 +311,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 38,
           unsafeVotes: 2
         },
-        userRating: 'safe',
+        userRating: null,
         scanDuration: 1100,
         isMockData: true
       },
@@ -347,7 +347,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 0,
           unsafeVotes: 15
         },
-        userRating: 'unsafe',
+        userRating: null,
         scanDuration: 4500,
         isMockData: true
       },
@@ -383,7 +383,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 5,
           unsafeVotes: 1
         },
-        userRating: 'safe',
+        userRating: null,
         scanDuration: 580,
         isMockData: true
       },
@@ -419,7 +419,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 0,
           unsafeVotes: 25
         },
-        userRating: 'unsafe',
+        userRating: null,
         scanDuration: 5200,
         isMockData: true
       },
@@ -441,7 +441,7 @@ export default function ScanHistoryScreen() {
           safeVotes: 52,
           unsafeVotes: 1
         },
-        userRating: 'safe',
+        userRating: null,
         scanDuration: 920,
         isMockData: true
       },
