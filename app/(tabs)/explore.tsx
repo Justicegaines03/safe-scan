@@ -541,6 +541,95 @@ export default function ScanHistoryScreen() {
     }
   };
 
+  // Retract user's community vote
+  const retractCommunityVote = async (url: string) => {
+    if (!backendInfrastructure) {
+      console.log('Backend infrastructure not available for community voting');
+      return { success: false, error: 'Backend infrastructure not available', timestamp: Date.now() };
+    }
+
+    try {
+      // Create QR hash for the community database
+      const qrHash = await hashUrl(url);
+      
+      // Get persistent user ID
+      const userId = await userIdentityService.getUserId();
+      
+      console.log('=== VOTE RETRACTION DEBUG (History Tab) ===');
+      console.log('URL:', url);
+      console.log('User ID:', userId);
+      console.log('QR Hash:', qrHash);
+      console.log('===========================================');
+      
+      console.log('Retracting community vote from History tab');
+      const result = await backendInfrastructure.retractVote(userId, qrHash);
+      
+      if (result.success && result.data) {
+        console.log('Community vote retracted successfully from History tab!');
+        console.log('Updated community rating:', result.data);
+        console.log(`Safe votes: ${result.data.safeVotes}, Unsafe votes: ${result.data.unsafeVotes}, Total: ${result.data.totalVotes}`);
+      } else {
+        console.log('Failed to retract community vote:', result.error);
+      }
+      
+      return result;
+    } catch (error) {
+      console.log('Error retracting community vote:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error', timestamp: Date.now() };
+    }
+  };
+
+  // Calculate app security assessment based on VirusTotal and community data
+  const calculateAppSecurityAssessment = (entry: ScanHistoryEntry): 'safe' | 'unsafe' | 'unknown' => {
+    const virusTotalResult = entry.virusTotalResult;
+    const communityRating = entry.communityRating;
+
+    // Handle different data availability scenarios (similar to safetyAssessment function)
+    if (!virusTotalResult && !communityRating) {
+      // No data from either source
+      return 'unknown';
+    } else if (!virusTotalResult && communityRating) {
+      // Only community data available
+      const confidence = communityRating.confidence || 0;
+      return confidence > 0.7 ? 'safe' : (confidence < 0.3 ? 'unsafe' : 'unknown');
+    } else if (virusTotalResult && !communityRating) {
+      // Only VirusTotal data available
+      if (virusTotalResult.positives === -1) {
+        // VirusTotal scan is pending/unknown
+        return 'unknown';
+      } else {
+        // VirusTotal scan completed successfully
+        return virusTotalResult.isSecure ? 'safe' : 'unsafe';
+      }
+    } else if (virusTotalResult && communityRating) {
+      // Both data sources available
+      if (virusTotalResult.positives === -1) {
+        // VirusTotal scan is pending, rely more on community
+        const confidence = communityRating.confidence || 0;
+        return confidence > 0.7 ? 'safe' : (confidence < 0.3 ? 'unsafe' : 'unknown');
+      } else {
+        // Both sources have valid data - use VirusTotal as primary
+        let isSafe = virusTotalResult.isSecure;
+        
+        // Only modify VirusTotal result if there's significant community data
+        if (communityRating.safeVotes + communityRating.unsafeVotes >= 3) {
+          const communityConfidence = communityRating.confidence || 0;
+          const vtConfidence = virusTotalResult.isSecure ? 0.9 : 0.1;
+          
+          // Combine when there's actual community input (≥3 votes)
+          const vtWeight = 0.75;
+          const communityWeight = 0.25;
+          const combinedConfidence = (vtConfidence * vtWeight) + (communityConfidence * communityWeight);
+          isSafe = combinedConfidence > 0.85;
+        }
+        
+        return isSafe ? 'safe' : 'unsafe';
+      }
+    }
+    
+    return 'unknown';
+  };
+
   const updateUserTag = async (entryId: string, newTag: 'safe' | 'unsafe' | null) => {
     console.log('Updating user tag for entry:', entryId, 'to:', newTag);
     
@@ -557,9 +646,10 @@ export default function ScanHistoryScreen() {
           updatedEntry.userOverride = true;
           console.log('User override applied - safety status changed to:', newTag);
         } else {
-          // If user removed their rating, keep current safetyStatus but mark as no override
+          // If user removed their rating, revert to app security assessment
+          updatedEntry.safetyStatus = calculateAppSecurityAssessment(entry);
           updatedEntry.userOverride = false;
-          console.log('User override removed');
+          console.log('User override removed - reverted to app assessment:', updatedEntry.safetyStatus);
         }
         
         return updatedEntry;
@@ -600,6 +690,27 @@ export default function ScanHistoryScreen() {
         await updateHistory(finalUpdatedHistory);
         console.log('Community rating updated in history entry');
       }
+    } else if (newTag === null && entryToUpdate && (entryToUpdate.url || entryToUpdate.qrData)) {
+      // User is removing their rating - retract from community database
+      const urlToUse = entryToUpdate.url || entryToUpdate.qrData;
+      const result = await retractCommunityVote(urlToUse);
+      
+      // Update the entry with new community data if retraction was successful
+      if (result.success && result.data) {
+        const finalUpdatedHistory = updatedHistory.map(entry => 
+          entry.id === entryId ? { 
+            ...entry, 
+            communityRating: {
+              confidence: result.data!.confidence,
+              safeVotes: result.data!.safeVotes,
+              unsafeVotes: result.data!.unsafeVotes
+            }
+          } : entry
+        );
+        setHistory(finalUpdatedHistory);
+        await updateHistory(finalUpdatedHistory);
+        console.log('Community rating updated after vote retraction in history entry');
+      }
     }
     
     setEditingTag(null);
@@ -624,9 +735,10 @@ export default function ScanHistoryScreen() {
           updatedEntry.userOverride = true;
           console.log('User override applied to entry', entry.id, '- safety status changed to:', newTag);
         } else {
-          // If user removed their rating, keep current safetyStatus but mark as no override
+          // If user removed their rating, revert to app security assessment
+          updatedEntry.safetyStatus = calculateAppSecurityAssessment(entry);
           updatedEntry.userOverride = false;
-          console.log('User override removed from entry', entry.id);
+          console.log('User override removed from entry', entry.id, '- reverted to app assessment:', updatedEntry.safetyStatus);
         }
         
         return updatedEntry;
@@ -665,6 +777,33 @@ export default function ScanHistoryScreen() {
       setHistory(updatedHistory);
       await updateHistory(updatedHistory);
       console.log('Community ratings updated for bulk entries');
+    } else if (newTag === null) {
+      // User is removing ratings - retract from community database
+      for (const entry of entriesToUpdate) {
+        if (entry.url || entry.qrData) {
+          const urlToUse = entry.url || entry.qrData;
+          const result = await retractCommunityVote(urlToUse);
+          
+          // Update the entry with new community data if retraction was successful
+          if (result.success && result.data) {
+            updatedHistory = updatedHistory.map(historyEntry => 
+              historyEntry.id === entry.id ? { 
+                ...historyEntry, 
+                communityRating: {
+                  confidence: result.data!.confidence,
+                  safeVotes: result.data!.safeVotes,
+                  unsafeVotes: result.data!.unsafeVotes
+                }
+              } : historyEntry
+            );
+          }
+        }
+      }
+      
+      // Save the final updated history with community data
+      setHistory(updatedHistory);
+      await updateHistory(updatedHistory);
+      console.log('Community ratings updated after bulk vote retractions');
     }
     
     setShowUserRating(false);

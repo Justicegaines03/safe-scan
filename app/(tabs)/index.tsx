@@ -608,6 +608,92 @@ export default function CameraScannerScreen() {
     }
   };
 
+  // Retract user's community vote
+  const retractCommunityVote = async (url: string) => {
+    if (!backendInfrastructure) {
+      console.error('Backend infrastructure not available for community voting');
+      return { success: false, error: 'Backend infrastructure not available', timestamp: Date.now() };
+    }
+
+    try {
+      // Create QR hash for the community database
+      const qrHash = await hashUrl(url);
+      
+      // Get persistent user ID
+      const userId = await userIdentityService.getUserId();
+      
+      console.log('=== VOTE RETRACTION DEBUG ===');
+      console.log('URL:', url);
+      console.log('User ID:', userId);
+      console.log('QR Hash:', qrHash);
+      console.log('=============================');
+      
+      console.log('Retracting community vote');
+      const result = await backendInfrastructure.retractVote(userId, qrHash);
+      
+      if (result.success && result.data) {
+        console.log('Community vote retracted successfully!');
+        console.log('Updated community rating:', result.data);
+        console.log(`Safe votes: ${result.data.safeVotes}, Unsafe votes: ${result.data.unsafeVotes}, Total: ${result.data.totalVotes}`);
+      } else {
+        console.log('Failed to retract community vote:', result.error);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error retracting community vote:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error', timestamp: Date.now() };
+    }
+  };
+
+  // Calculate app security assessment based on VirusTotal and community data
+  const calculateAppSecurityAssessment = (virusTotalResult?: VirusTotalResult, communityRating?: CommunityRating): 'safe' | 'unsafe' | 'unknown' => {
+    // Handle different data availability scenarios (similar to safetyAssessment function)
+    if (!virusTotalResult && !communityRating) {
+      // No data from either source
+      return 'unknown';
+    } else if (!virusTotalResult && communityRating) {
+      // Only community data available
+      const confidence = communityRating.communityConfidence || 0;
+      return confidence > 0.7 ? 'safe' : (confidence < 0.3 ? 'unsafe' : 'unknown');
+    } else if (virusTotalResult && !communityRating) {
+      // Only VirusTotal data available
+      if (virusTotalResult.positives === -1) {
+        // VirusTotal scan is pending/unknown
+        return 'unknown';
+      } else {
+        // VirusTotal scan completed successfully
+        return virusTotalResult.isSecure ? 'safe' : 'unsafe';
+      }
+    } else if (virusTotalResult && communityRating) {
+      // Both data sources available
+      if (virusTotalResult.positives === -1) {
+        // VirusTotal scan is pending, rely more on community
+        const confidence = communityRating.communityConfidence || 0;
+        return confidence > 0.7 ? 'safe' : (confidence < 0.3 ? 'unsafe' : 'unknown');
+      } else {
+        // Both sources have valid data - use VirusTotal as primary
+        let isSafe = virusTotalResult.isSecure;
+        
+        // Only modify VirusTotal result if there's significant community data
+        if (communityRating.safeVotes + (communityRating.totalVotes - communityRating.safeVotes) >= 3) {
+          const communityConfidence = communityRating.communityConfidence || 0;
+          const vtConfidence = virusTotalResult.isSecure ? 0.9 : 0.1;
+          
+          // Combine when there's actual community input (≥3 votes)
+          const vtWeight = 0.75;
+          const communityWeight = 0.25;
+          const combinedConfidence = (vtConfidence * vtWeight) + (communityConfidence * communityWeight);
+          isSafe = combinedConfidence > 0.85;
+        }
+        
+        return isSafe ? 'safe' : 'unsafe';
+      }
+    }
+    
+    return 'unknown';
+  };
+
   // Sync user rating to existing history entry
   const syncUserRatingToHistory = async (newRating: 'safe' | 'unsafe' | null, communityData?: { safeVotes: number; totalVotes: number; confidence: number }) => {
     try {
@@ -635,9 +721,14 @@ export default function CameraScannerScreen() {
             mostRecentEntry.userOverride = true;
             console.log('User override applied - safety status changed to:', newRating);
           } else {
-            // If user removed their rating, revert to original system assessment
+            // If user removed their rating, revert to app security assessment
+            const appAssessment = calculateAppSecurityAssessment(
+              mostRecentEntry.virusTotalResult,
+              mostRecentEntry.communityRating
+            );
+            mostRecentEntry.safetyStatus = appAssessment;
             mostRecentEntry.userOverride = false;
-            // Keep the original safety status from the system assessment
+            console.log('User override removed - reverted to app assessment:', appAssessment);
           }
           
           // Update community data if provided
@@ -1016,7 +1107,16 @@ export default function CameraScannerScreen() {
                 <ThemedText type="title" style={[styles.quickResultTitle, { backgroundColor: 'transparent', fontSize: 28 }]}>
                   {userRating ? 
                     (userRating === 'safe' ? 'Safe' : 'Unsafe') : 
-                    (!validationResult.virusTotal ? 'Warning' : (validationResult.virusTotal.isSecure ? 'Safe' : 'Unsafe'))
+                    (() => {
+                      // When user rating is null, use the app's comprehensive safety assessment
+                      const appAssessment = validationResult.safety?.safety;
+                      switch (appAssessment) {
+                        case 'safe': return 'Safe';
+                        case 'unsafe': return 'Unsafe';
+                        case 'unknown': return 'Unknown';
+                        default: return 'Unknown';
+                      }
+                    })()
                   }
                 </ThemedText>
 
@@ -1097,6 +1197,31 @@ export default function CameraScannerScreen() {
                               syncUserRatingToHistory(newRating);
                             }
                           });
+                        } else if (newRating === null && validationResult?.url) {
+                          // User is deselecting their rating - retract from community database
+                          retractCommunityVote(validationResult.url).then((result) => {
+                            // Update validation result with new community data
+                            if (result.success && result.data) {
+                              setValidationResult(prev => prev ? {
+                                ...prev,
+                                community: {
+                                  safeVotes: result.data!.safeVotes,
+                                  totalVotes: result.data!.totalVotes,
+                                  communityConfidence: result.data!.confidence
+                                }
+                              } : null);
+                              
+                              // Sync the rating removal and community data to the already-saved history entry
+                              syncUserRatingToHistory(null, {
+                                safeVotes: result.data!.safeVotes,
+                                totalVotes: result.data!.totalVotes,
+                                confidence: result.data!.confidence
+                              });
+                            } else {
+                              // Sync just the rating removal if community vote retraction failed
+                              syncUserRatingToHistory(null);
+                            }
+                          });
                         } else {
                           // Sync the rating to the already-saved history entry
                           syncUserRatingToHistory(newRating);
@@ -1153,6 +1278,31 @@ export default function CameraScannerScreen() {
                             } else {
                               // Sync just the rating if community vote failed
                               syncUserRatingToHistory(newRating);
+                            }
+                          });
+                        } else if (newRating === null && validationResult?.url) {
+                          // User is deselecting their rating - retract from community database
+                          retractCommunityVote(validationResult.url).then((result) => {
+                            // Update validation result with new community data
+                            if (result.success && result.data) {
+                              setValidationResult(prev => prev ? {
+                                ...prev,
+                                community: {
+                                  safeVotes: result.data!.safeVotes,
+                                  totalVotes: result.data!.totalVotes,
+                                  communityConfidence: result.data!.confidence
+                                }
+                              } : null);
+                              
+                              // Sync the rating removal and community data to the already-saved history entry
+                              syncUserRatingToHistory(null, {
+                                safeVotes: result.data!.safeVotes,
+                                totalVotes: result.data!.totalVotes,
+                                confidence: result.data!.confidence
+                              });
+                            } else {
+                              // Sync just the rating removal if community vote retraction failed
+                              syncUserRatingToHistory(null);
                             }
                           });
                         } else {

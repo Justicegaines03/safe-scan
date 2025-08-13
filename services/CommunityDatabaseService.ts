@@ -259,6 +259,84 @@ export class CommunityDatabaseService {
   }
 
   /**
+   * Retract a user's vote from the community database
+   */
+  async retractVote(userId: string, qrHash: string): Promise<DatabaseResponse<CommunityRating>> {
+    try {
+      // Check if user has a vote to retract
+      const existingVote = this.getExistingUserVote(userId, qrHash);
+      
+      if (!existingVote) {
+        return {
+          success: false,
+          error: 'No vote found to retract',
+          timestamp: Date.now()
+        };
+      }
+
+      console.log('=== RETRACTING VOTE ===');
+      console.log('User ID:', userId);
+      console.log('QR Hash:', qrHash);
+      console.log('Vote to retract:', existingVote.vote);
+      console.log('======================');
+
+      // Remove the vote from user history
+      this.removeUserVote(userId, qrHash);
+
+      // Update community rating by removing this vote
+      const updatedRating = await this.removeVoteFromRating(qrHash, existingVote);
+
+      return {
+        success: true,
+        data: updatedRating,
+        timestamp: Date.now()
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Vote retraction failed',
+        timestamp: Date.now()
+      };
+    }
+  }
+
+  /**
+   * Remove a vote from the community rating
+   */
+  private async removeVoteFromRating(qrHash: string, voteToRemove: Vote): Promise<CommunityRating> {
+    const existingRating = this.ratingsCache.get(qrHash) || {
+      qrHash: qrHash,
+      safeVotes: 0,
+      unsafeVotes: 0,
+      totalVotes: 0,
+      confidence: 0.5,
+      lastUpdated: Date.now()
+    };
+
+    // Subtract the retracted vote
+    if (voteToRemove.vote === 'safe') {
+      existingRating.safeVotes = Math.max(0, existingRating.safeVotes - 1);
+    } else {
+      existingRating.unsafeVotes = Math.max(0, existingRating.unsafeVotes - 1);
+    }
+    existingRating.totalVotes = Math.max(0, existingRating.totalVotes - 1);
+    existingRating.lastUpdated = Date.now();
+
+    // Recalculate confidence with weighted votes
+    existingRating.confidence = this.calculateWeightedConfidence(qrHash);
+
+    // If no votes remain, remove from cache or reset to neutral
+    if (existingRating.totalVotes === 0) {
+      existingRating.confidence = 0.5; // Neutral confidence
+      existingRating.safeVotes = 0;
+      existingRating.unsafeVotes = 0;
+    }
+
+    this.ratingsCache.set(qrHash, existingRating);
+    return existingRating;
+  }
+
+  /**
    * Get community rating for QR hash
    */
   async getCommunityRating(qrHash: string): Promise<CommunityRating | null> {

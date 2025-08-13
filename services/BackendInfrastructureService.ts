@@ -209,6 +209,65 @@ export class BackendInfrastructureService {
   }
 
   /**
+   * Retract community vote with real-time updates
+   */
+  async retractVote(userId: string, qrHash: string): Promise<DatabaseResponse<CommunityRating>> {
+    try {
+      console.log('=== Retracting vote - userId:', userId, 'qrHash:', qrHash);
+      
+      // Retract vote from community database
+      const result = await this.errorHandler.executeWithCircuitBreaker('communityDB', async () => {
+        return this.communityDB.retractVote(userId, qrHash);
+      });
+
+      if (result.success && result.data) {
+        console.log('=== Vote retracted successfully, updating cache and broadcasting');
+        
+        // Update cache with the new rating
+        this.cache.set(`rating_${qrHash}`, result.data);
+        
+        // Broadcast update via WebSocket
+        this.webSocket.broadcastRatingUpdate(qrHash, result.data);
+        
+        // Queue retraction for sync
+        try {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const SYNC_QUEUE_KEY = '@safe_scan_sync_queue';
+          
+          // Get existing queue
+          const existingQueue = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
+          const queue = existingQueue ? JSON.parse(existingQueue) : [];
+          
+          // Add retraction to queue
+          queue.push({
+            type: 'retractVote',
+            data: { userId, qrHash },
+            timestamp: Date.now(),
+            queuedAt: Date.now(),
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+          });
+          
+          // Save updated queue
+          await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+          console.log('Vote retraction queued for sync successfully');
+          
+        } catch (syncError) {
+          console.error('Failed to queue vote retraction for sync:', syncError);
+          // Don't throw here - the retraction was still processed successfully
+        }
+      }
+
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Vote retraction failed',
+        timestamp: Date.now()
+      };
+    }
+  }
+
+  /**
    * Get community rating with caching
    */
   async getCommunityRating(qrHash: string): Promise<CommunityRating | null> {
