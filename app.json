@@ -1,16 +1,34 @@
 {
   "expo": {
-    "name": "safe-scan",
+    "name": "SafeScan",
     "slug": "safe-scan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/Icon-Light.png",
-    "scheme": "myapp",
+    "scheme": "safescan",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "description": "SafeScan is a powerful QR code security scanner that uses VirusTotal API and community intelligence to protect you from malicious links and unsafe content.",
+    "privacy": "public",
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.justicegaines03.safe-scan"
+      "bundleIdentifier": "com.justicegaines03.safe-scan",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SafeScan needs camera access to scan QR codes for security analysis.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "safescan",
+            "CFBundleURLSchemes": [
+              "safescan"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -44,7 +62,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "VIRUSTOTAL_API_KEY": "${VIRUS_TOTAL_API_KEY}"
+      "VIRUSTOTAL_API_KEY": "1c705c95f2e7749aee927ec35e95a1c20b0e41351ba6981da083951e7c80466f",
+      "router": {},
+      "eas": {
+        "projectId": "a39c5c3e-29fc-452a-98c2-069ce9b5f8df"
+      }
     }
   }
 }
