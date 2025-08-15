@@ -62,7 +62,6 @@
       "typedRoutes": true
     },
     "extra": {
-      "VIRUSTOTAL_API_KEY": "1c705c95f2e7749aee927ec35e95a1c20b0e41351ba6981da083951e7c80466f",
       "router": {},
       "eas": {
         "projectId": "a39c5c3e-29fc-452a-98c2-069ce9b5f8df"
