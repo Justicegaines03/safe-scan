@@ -40,6 +40,7 @@ interface ScanHistoryEntry {
     permalink: string;
   };
   safetyStatus: 'safe' | 'unsafe' | 'unknown';
+  originalSafetyStatus?: 'safe' | 'unsafe' | 'unknown'; // Store original assessment for revert
   communityRating?: {
     confidence: number;
     safeVotes: number;
@@ -184,6 +185,7 @@ export default function ScanHistoryScreen() {
         url: 'https://www.google.com',
         timestamp: now - 300000, // 5 minutes ago
         safetyStatus: 'safe',
+        originalSafetyStatus: 'safe', // Store original assessment
         virusTotalResult: { 
           isSecure: true, 
           positives: 0, 
@@ -206,6 +208,7 @@ export default function ScanHistoryScreen() {
         url: 'http://malicious-phishing-site.com/steal-data',
         timestamp: now - 1800000, // 30 minutes ago
         safetyStatus: 'unsafe',
+        originalSafetyStatus: 'unsafe', // Store original assessment
         virusTotalResult: { 
           isSecure: false, 
           positives: 28, 
@@ -227,6 +230,7 @@ export default function ScanHistoryScreen() {
         qrData: 'WiFi:T:WPA;S:CoffeeShop_Free;P:password123;H:false;;',
         timestamp: now - 3600000, // 1 hour ago
         safetyStatus: 'unknown',
+        originalSafetyStatus: 'unknown', // Store original assessment
         communityRating: {
           confidence: 0.5,
           safeVotes: 0,
@@ -242,6 +246,7 @@ export default function ScanHistoryScreen() {
         url: 'https://github.com/facebook/react-native',
         timestamp: now - 7200000, // 2 hours ago
         safetyStatus: 'safe',
+        originalSafetyStatus: 'safe', // Store original assessment
         virusTotalResult: { 
           isSecure: true, 
           positives: 0, 
@@ -263,6 +268,7 @@ export default function ScanHistoryScreen() {
         qrData: 'BEGIN:VCARD\nVERSION:3.0\nFN:John Smith\nORG:Tech Corp\nTEL:+1-555-123-4567\nEMAIL:john@techcorp.com\nEND:VCARD',
         timestamp: now - 14400000, // 4 hours ago
         safetyStatus: 'safe', // Based on community confidence 0.8 > 0.7 threshold
+        originalSafetyStatus: 'safe', // Store original assessment
         communityRating: {
           confidence: 0.8,
           safeVotes: 8,
@@ -278,6 +284,7 @@ export default function ScanHistoryScreen() {
         url: 'https://suspicious-shortened-url.bit.ly/x7h2k9',
         timestamp: now - 21600000, // 6 hours ago
         safetyStatus: 'unsafe',
+        originalSafetyStatus: 'unsafe', // Store original assessment
         virusTotalResult: { 
           isSecure: false, 
           positives: 8, 
@@ -300,6 +307,7 @@ export default function ScanHistoryScreen() {
         url: 'https://www.netflix.com/browse',
         timestamp: now - 43200000, // 12 hours ago
         safetyStatus: 'safe',
+        originalSafetyStatus: 'safe', // Store original assessment
         virusTotalResult: { 
           isSecure: true, 
           positives: 0, 
@@ -321,6 +329,7 @@ export default function ScanHistoryScreen() {
         qrData: 'tel:+1-800-555-0199',
         timestamp: now - 86400000, // 1 day ago
         safetyStatus: 'unknown',
+        originalSafetyStatus: 'unknown', // Store original assessment
         communityRating: {
           confidence: 0.6,
           safeVotes: 3,
@@ -336,6 +345,7 @@ export default function ScanHistoryScreen() {
         url: 'https://crypto-scam-investment.com/get-rich-quick',
         timestamp: now - 172800000, // 2 days ago
         safetyStatus: 'unsafe',
+        originalSafetyStatus: 'unsafe', // Store original assessment
         virusTotalResult: { 
           isSecure: false, 
           positives: 35, 
@@ -358,6 +368,7 @@ export default function ScanHistoryScreen() {
         url: 'https://stackoverflow.com/questions/react-native',
         timestamp: now - 259200000, // 3 days ago
         safetyStatus: 'safe',
+        originalSafetyStatus: 'safe', // Store original assessment
         virusTotalResult: { 
           isSecure: true, 
           positives: 0, 
@@ -379,6 +390,7 @@ export default function ScanHistoryScreen() {
         qrData: 'WIFI:T:WPA2;S:HomeNetwork5G;P:supersecurepassword2023;H:true;;',
         timestamp: now - 345600000, // 4 days ago
         safetyStatus: 'safe', // Based on community confidence 0.7 >= 0.7 threshold
+        originalSafetyStatus: 'safe', // Store original assessment
         communityRating: {
           confidence: 0.7,
           safeVotes: 5,
@@ -393,6 +405,7 @@ export default function ScanHistoryScreen() {
         qrData: 'mailto:support@legitcompany.com?subject=Product%20Inquiry&body=Hello%20team',
         timestamp: now - 432000000, // 5 days ago
         safetyStatus: 'unknown',
+        originalSafetyStatus: 'unknown', // Store original assessment
         communityRating: {
           confidence: 0.5,
           safeVotes: 0,
@@ -408,6 +421,7 @@ export default function ScanHistoryScreen() {
         url: 'https://fake-bank-login.phishing-site.ru/secure',
         timestamp: now - 518400000, // 6 days ago
         safetyStatus: 'unsafe',
+        originalSafetyStatus: 'unsafe', // Store original assessment
         virusTotalResult: { 
           isSecure: false, 
           positives: 42, 
@@ -430,6 +444,7 @@ export default function ScanHistoryScreen() {
         url: 'https://www.apple.com/iphone',
         timestamp: now - 604800000, // 7 days ago
         safetyStatus: 'safe',
+        originalSafetyStatus: 'safe', // Store original assessment
         virusTotalResult: { 
           isSecure: true, 
           positives: 0, 
@@ -451,6 +466,7 @@ export default function ScanHistoryScreen() {
         qrData: 'Event: Team Meeting\nDate: 2024-01-15\nTime: 2:00 PM\nLocation: Conference Room A\nNotes: Bring laptop and quarterly reports',
         timestamp: now - 691200000, // 8 days ago
         safetyStatus: 'safe', // Based on community confidence 0.9 > 0.7 threshold
+        originalSafetyStatus: 'safe', // Store original assessment
         communityRating: {
           confidence: 0.9,
           safeVotes: 12,
@@ -676,10 +692,11 @@ export default function ScanHistoryScreen() {
           updatedEntry.userOverride = true;
           console.log('User override applied - safety status changed to:', newTag);
         } else {
-          // If user removed their rating, revert to app security assessment using updated data
-          updatedEntry.safetyStatus = calculateAppSecurityAssessment(updatedEntry);
+          // If user removed their rating, revert to original safety assessment
+          const originalAssessment = updatedEntry.originalSafetyStatus || 'unknown';
+          updatedEntry.safetyStatus = originalAssessment;
           updatedEntry.userOverride = false;
-          console.log('User override removed - reverted to app assessment:', updatedEntry.safetyStatus);
+          console.log('User override removed - reverted to original assessment:', originalAssessment);
         }
         
         return updatedEntry;

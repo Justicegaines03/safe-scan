@@ -625,6 +625,7 @@ export default function CameraScannerScreen() {
         qrData: scanData.url, // Use the URL as qrData for consistency
         virusTotalResult: scanData.virusTotal, 
         safetyStatus: getSafetyStatus(), // Now correctly a string with user override
+        originalSafetyStatus: scanData.safety?.safety || 'unknown', // Store original assessment for revert
         communityRating: scanData.community, 
         url: scanData.url,
         userRating: userRating, // Add user's safety rating
@@ -806,14 +807,11 @@ export default function CameraScannerScreen() {
             mostRecentEntry.userOverride = true;
             console.log('User override applied - safety status changed to:', newRating);
           } else {
-            // If user removed their rating, revert to app security assessment
-            const appAssessment = calculateAppSecurityAssessment(
-              mostRecentEntry.virusTotalResult,
-              mostRecentEntry.communityRating
-            );
-            mostRecentEntry.safetyStatus = appAssessment;
+            // If user removed their rating, revert to original safety assessment
+            const originalAssessment = mostRecentEntry.originalSafetyStatus || 'unknown';
+            mostRecentEntry.safetyStatus = originalAssessment;
             mostRecentEntry.userOverride = false;
-            console.log('User override removed - reverted to app assessment:', appAssessment);
+            console.log('User override removed - reverted to original assessment:', originalAssessment);
           }
           
           // Update community data if provided
@@ -1286,7 +1284,7 @@ export default function CameraScannerScreen() {
                         } else if (newRating === null && validationResult?.url) {
                           // User is deselecting their rating - retract from community database
                           retractCommunityVote(validationResult.url).then((result) => {
-                            // Update validation result with new community data
+                            // Update validation result with new community data and reset safety to original
                             if (result.success && result.data) {
                               setValidationResult(prev => prev ? {
                                 ...prev,
@@ -1294,7 +1292,12 @@ export default function CameraScannerScreen() {
                                   safeVotes: result.data!.safeVotes,
                                   totalVotes: result.data!.totalVotes,
                                   communityConfidence: result.data!.confidence
-                                }
+                                },
+                                // Reset safety to original assessment (don't recalculate)
+                                safety: prev.safety ? {
+                                  ...prev.safety,
+                                  safety: prev.safety.safety // Keep original safety status
+                                } : undefined
                               } : null);
                               
                               // Sync the rating removal and community data to the already-saved history entry
@@ -1305,6 +1308,14 @@ export default function CameraScannerScreen() {
                               });
                             } else {
                               // Sync just the rating removal if community vote retraction failed
+                              // Also reset the validation result safety to original status
+                              setValidationResult(prev => prev ? {
+                                ...prev,
+                                safety: prev.safety ? {
+                                  ...prev.safety,
+                                  safety: prev.safety.safety // Keep original safety status
+                                } : undefined
+                              } : null);
                               syncUserRatingToHistory(null);
                             }
                           });
@@ -1369,7 +1380,7 @@ export default function CameraScannerScreen() {
                         } else if (newRating === null && validationResult?.url) {
                           // User is deselecting their rating - retract from community database
                           retractCommunityVote(validationResult.url).then((result) => {
-                            // Update validation result with new community data
+                            // Update validation result with new community data and reset safety to original
                             if (result.success && result.data) {
                               setValidationResult(prev => prev ? {
                                 ...prev,
@@ -1377,7 +1388,12 @@ export default function CameraScannerScreen() {
                                   safeVotes: result.data!.safeVotes,
                                   totalVotes: result.data!.totalVotes,
                                   communityConfidence: result.data!.confidence
-                                }
+                                },
+                                // Reset safety to original assessment (don't recalculate)
+                                safety: prev.safety ? {
+                                  ...prev.safety,
+                                  safety: prev.safety.safety // Keep original safety status
+                                } : undefined
                               } : null);
                               
                               // Sync the rating removal and community data to the already-saved history entry
@@ -1388,6 +1404,14 @@ export default function CameraScannerScreen() {
                               });
                             } else {
                               // Sync just the rating removal if community vote retraction failed
+                              // Also reset the validation result safety to original status
+                              setValidationResult(prev => prev ? {
+                                ...prev,
+                                safety: prev.safety ? {
+                                  ...prev.safety,
+                                  safety: prev.safety.safety // Keep original safety status
+                                } : undefined
+                              } : null);
                               syncUserRatingToHistory(null);
                             }
                           });
