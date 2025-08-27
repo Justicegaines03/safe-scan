@@ -27,7 +27,12 @@
               "safescan"
             ]
           }
-        ]
+        ],
+        "NSUserActivityTypes": [
+          "com.justicegaines03.safe-scan.scan-qr-code",
+          "com.justicegaines03.safe-scan.quick-scan"
+        ],
+        "NSSupportsLiveActivities": true
       }
     },
     "android": {
@@ -35,7 +40,41 @@
         "foregroundImage": "./assets/images/Icon-Light.png",
         "backgroundColor": "#2E7D32",
         "monochromeImage": "./assets/images/Icon-Dark.png"
-      }
+      },
+      "intentFilters": [
+        {
+          "action": "android.intent.action.VIEW",
+          "data": [
+            {
+              "scheme": "safescan"
+            }
+          ],
+          "category": [
+            "android.intent.category.BROWSABLE",
+            "android.intent.category.DEFAULT"
+          ]
+        }
+      ],
+      "shortcuts": [
+        {
+          "id": "scan-qr-code",
+          "shortLabel": "Scan QR Code",
+          "longLabel": "Scan QR Code for Security",
+          "icon": "./assets/images/Icon-Light.png",
+          "data": {
+            "url": "safescan://scan-qr"
+          }
+        },
+        {
+          "id": "quick-scan",
+          "shortLabel": "Quick Scan",
+          "longLabel": "Quick Security Scan",
+          "icon": "./assets/images/Icon-Light.png",
+          "data": {
+            "url": "safescan://quick-scan"
+          }
+        }
+      ]
     },
     "web": {
       "bundler": "metro",

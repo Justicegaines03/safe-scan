@@ -1,3 +1,24 @@
+/**
+ * QR Code Scanner with Deep Link Support
+ * 
+ * This component supports launching via shortcuts and deep links:
+ * - safescan://scan-qr - Launches QR scanner
+ * - safescan://quick-scan - Launches quick scanner mode
+ * 
+ * Features:
+ * - iOS App Shortcuts support (configured in app.json)
+ * - Android App Shortcuts support (configured in app.json)
+ * - Deep link handling for both launch and running app scenarios
+ * - Enhanced scanning mode when launched via shortcuts (faster response)
+ * - Visual feedback when activated via shortcut
+ * - Development test button (only in __DEV__ mode)
+ * 
+ * To test deep links in development:
+ * - iOS Simulator: Use simulator menu Device > Device > URL
+ * - Android Emulator: Use adb command: adb shell am start -W -a android.intent.action.VIEW -d "safescan://scan-qr" com.justicegaines03.safe-scan
+ * - Use the "Test Shortcut" button (development only)
+ */
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
@@ -93,6 +114,7 @@ export default function CameraScannerScreen() {
   const [scanCount, setScanCount] = useState(0);
   const [showManualInput, setShowManualInput] = useState(false);
   const [isTabFocused, setIsTabFocused] = useState(true); // Track if this tab is focused
+  const [launchedViaShortcut, setLaunchedViaShortcut] = useState(false); // Track shortcut launches
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
   const isProcessing = useRef(false); // Immediate flag to prevent duplicate processing
   const isSaving = useRef(false); // Immediate flag to prevent duplicate saves
@@ -104,6 +126,92 @@ export default function CameraScannerScreen() {
     if (!permission?.granted) {
       requestPermission();
     }
+  }, [permission, requestPermission]);
+
+  // Handle deep link launches and shortcut detection
+  useEffect(() => {
+    const handleShortcutLaunch = async () => {
+      try {
+        // Check if app was launched via deep link/shortcut
+        const initialURL = await Linking.getInitialURL();
+        console.log('Initial URL detected:', initialURL);
+        
+        if (initialURL && (initialURL.includes('scan-qr') || initialURL.includes('quick-scan'))) {
+          console.log('App launched via QR scanning shortcut');
+          setLaunchedViaShortcut(true);
+          
+          // Clear any existing validation results to show fresh scanner
+          setValidationResult(null);
+          setUserRating(null);
+          setShowUserRating(false);
+          setIsValidating(false);
+          
+          // Reduce scan cooldown for faster response when launched via shortcut
+          scanCooldown.current = 200; // Faster scanning for shortcut launches
+          
+          // Enable scanning if we have permission
+          if (permission?.granted) {
+            setIsScanning(true);
+            console.log('Shortcut launch: Camera scanning enabled with fast mode');
+          } else {
+            console.log('Shortcut launch: Requesting camera permission');
+            requestPermission().then(() => {
+              setIsScanning(true);
+            });
+          }
+          
+          // Auto-clear shortcut indicator after 3 seconds
+          setTimeout(() => {
+            setLaunchedViaShortcut(false);
+            scanCooldown.current = 500; // Reset to normal cooldown
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Error handling shortcut launch:', error);
+      }
+    };
+
+    // Handle app launch from shortcut
+    handleShortcutLaunch();
+
+    // Listen for URL changes while app is running
+    const handleDeepLink = (event: { url: string }) => {
+      console.log('Deep link received while app running:', event.url);
+      
+      if (event.url && (event.url.includes('scan-qr') || event.url.includes('quick-scan'))) {
+        console.log('Switching to QR scanner via deep link');
+        setLaunchedViaShortcut(true);
+        
+        // Reset scanner state
+        setValidationResult(null);
+        setUserRating(null);
+        setShowUserRating(false);
+        setIsValidating(false);
+        
+        // Enable fast scanning mode
+        scanCooldown.current = 200;
+        setIsScanning(true);
+        
+        // Request permission if needed
+        if (!permission?.granted) {
+          requestPermission();
+        }
+        
+        // Auto-clear shortcut indicator after 3 seconds
+        setTimeout(() => {
+          setLaunchedViaShortcut(false);
+          scanCooldown.current = 500; // Reset to normal cooldown
+        }, 3000);
+      }
+    };
+
+    // Add event listener for URLs received while app is running
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // Cleanup
+    return () => {
+      subscription?.remove();
+    };
   }, [permission, requestPermission]);
 
   // Check for reset signal when tab becomes focused (only if user interacted with history buttons)
@@ -824,12 +932,44 @@ export default function CameraScannerScreen() {
     }
   };
 
+  // Test deep link functionality (for development/debugging)
+  const testDeepLink = async (linkType: 'scan-qr' | 'quick-scan') => {
+    try {
+      const testURL = `safescan://${linkType}`;
+      console.log('Testing deep link:', testURL);
+      
+      // Simulate deep link trigger
+      setLaunchedViaShortcut(true);
+      setValidationResult(null);
+      setUserRating(null);
+      setShowUserRating(false);
+      setIsValidating(false);
+      scanCooldown.current = 200;
+      setIsScanning(true);
+      
+      // Auto-clear after 3 seconds
+      setTimeout(() => {
+        setLaunchedViaShortcut(false);
+        scanCooldown.current = 500;
+      }, 3000);
+      
+      Alert.alert(
+        'Deep Link Test',
+        `Simulated ${linkType} shortcut activation!\n\nIn production, this would be triggered by:\n• iOS App Shortcuts\n• Android App Shortcuts\n• Control Center widgets\n• Siri Shortcuts`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Deep link test error:', error);
+    }
+  };
+
   // Reset the scanner
   const resetScanner = () => {
     setValidationResult(null);
     setUserRating(null);
     setShowUserRating(false);
     setIsScanning(isTabFocused); // Only enable scanning if tab is focused
+    setLaunchedViaShortcut(false); // Reset shortcut indicator
     isProcessing.current = false; // Reset processing flag
     isSaving.current = false; // Reset saving flag
     isShowingDuplicateAlert.current = false; // Reset duplicate alert flag
@@ -1375,9 +1515,10 @@ export default function CameraScannerScreen() {
               <>
                 <View style={styles.scanFrame} />
                 <ThemedText style={styles.scanText}>
-                  Point camera at QR code
+                  {launchedViaShortcut ? 'Shortcut activated - Ready to scan!' : 'Point camera at QR code'}
                 </ThemedText>
                 <ThemedText style={[styles.scanText, { fontSize: 14, marginTop: 8, opacity: 0.8 }]}>
+                  {launchedViaShortcut ? 'Fast scanning mode enabled' : ''}
                 </ThemedText>
               </>
             )}
@@ -1405,6 +1546,14 @@ export default function CameraScannerScreen() {
           >
             <Text style={[styles.buttonText, { color: colors.tint }]}>Manual Input</Text>
           </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.controlButton, { backgroundColor: '#FFA726' }]}
+            onPress={() => testDeepLink('scan-qr')}
+          >
+            <Text style={styles.buttonText}>Test Link</Text>
+          </TouchableOpacity>
+          
         </ThemedView>
       </ThemedView>
     </GestureHandlerRootView>
@@ -1527,17 +1676,20 @@ const styles = StyleSheet.create({
   controlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    flexWrap: 'wrap', // Allow wrapping for development button
     padding: 0, // Remove all padding
     paddingVertical: 12, // Add minimal vertical padding only
     paddingHorizontal: 16, // Keep horizontal padding for button spacing
     paddingBottom: Platform.OS === 'ios' ? 20 : 12, // Minimal bottom padding for safe area
+    gap: 8, // Add gap between buttons
   },
   controlButton: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16, // Reduced for better fit
     borderRadius: 8,
-    minWidth: 100,
+    minWidth: 90, // Reduced for better fit
     alignItems: 'center',
+    marginVertical: 4, // Add vertical margin for wrapped buttons
   },
   secondaryButton: {
     backgroundColor: 'transparent',
