@@ -1427,13 +1427,8 @@ export default function ScanHistoryScreen() {
         }
         setSelectedEntries(newSelectedEntries);
         console.log('Entry selection toggled:', item.id, 'Selected:', !isSelected);
-      } else {
-        // Normal mode, open rating interface
-        console.log('History item selected:', item.id, '- Opening rating interface');
-        setSelectedEntry(item);
-        setUserRating(item.userRating || null);
-        setShowUserRating(true);
       }
+      // Normal mode: do nothing - only Rate button should open rating interface
     };
 
     // Function to signal scanner tab to reset to scanning mode
@@ -1527,8 +1522,9 @@ export default function ScanHistoryScreen() {
               marginLeft: isSelectMode ? 30 : 0, // Create space for circle in select mode
             }
           ]}
-          onPress={handlePress}
-          activeOpacity={0.7}
+          onPress={isSelectMode ? handlePress : undefined}
+          activeOpacity={isSelectMode ? 0.7 : 1}
+          disabled={!isSelectMode}
         >
 
           {/* Safety status at the top */}
