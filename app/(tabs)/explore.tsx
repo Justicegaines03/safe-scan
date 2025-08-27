@@ -1160,7 +1160,6 @@ export default function ScanHistoryScreen() {
               setHistory(combinedHistory);
               
               console.log('Mock scans imported successfully, total entries:', combinedHistory.length);
-              Alert.alert('Success', `Imported ${mockData.length} mock scans for demonstration`);
             } catch (error) {
               console.log('Error importing mock scans:', error);
               Alert.alert('Error', 'Failed to import mock scans');
@@ -2325,18 +2324,32 @@ export default function ScanHistoryScreen() {
         </View>
       </ThemedView>
 
-      {filteredHistory.length === 0 ? (
-        <ThemedView style={styles.emptyContainer}>
+      {filteredHistory.length === 0 && (
+        <View style={styles.emptyContentContainer}>
           <ThemedText style={styles.emptyTitle}>
             {history.length === 0 ? 'No scans yet!' : 'No matches found'}
           </ThemedText>
           <ThemedText style={styles.emptyText}>
             {history.length === 0 
-              ? 'Start scanning QR codes to build your history'
+              ? 'Start scanning or add mock scans for demonstration'
               : 'Try adjusting your search or filters'
             }
           </ThemedText>
-        </ThemedView>
+          {history.length === 0 && (
+            <TouchableOpacity 
+              style={styles.mockScanButton}
+              onPress={importMockScans}
+            >
+              <ThemedText style={styles.mockScanButtonText}>
+                Import Mock Scans
+              </ThemedText>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {filteredHistory.length === 0 ? (
+        <ThemedView style={styles.emptyContainer}></ThemedView>
       ) : (
         <FlatList
           data={filteredHistory}
@@ -2526,7 +2539,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingVertical: 12,
   },
   statsText: {
     fontSize: 14,
@@ -2652,10 +2665,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyContainer: {
-    flex: 1,
+    position: 'absolute',
+    top: 120,
+    left: 0,
+    right: 0,
+    bottom: 100,
+    zIndex: -1,
+  },
+  emptyContentContainer: {
+    position: 'absolute',
+    top: 200,
+    left: 0,
+    right: 0,
+    bottom: 100,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    paddingHorizontal: 32,
   },
   emptyTitle: {
     fontSize: 18,
@@ -2668,6 +2693,19 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     fontSize: 14,
     lineHeight: 20,
+  },
+  mockScanButton: {
+    backgroundColor: '#d4d4d4',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  mockScanButtonText: {
+    color: '#007bff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,

@@ -152,7 +152,6 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               await AsyncStorage.removeItem(STORAGE_KEY);
-              Alert.alert('Success', 'All scan history has been cleared');
             } catch (error) {
               Alert.alert('Error', 'Failed to clear history');
             }
@@ -217,6 +216,212 @@ export default function SettingsScreen() {
         safetyStatus: 'unknown',
         scanDuration: 450,
         isMockData: true
+      },
+      {
+        id: '4',
+        qrData: 'https://github.com',
+        url: 'https://github.com',
+        timestamp: now - 7200000, // 2 hours ago
+        safetyStatus: 'safe',
+        virusTotalResult: { 
+          isSecure: true, 
+          positives: 0, 
+          total: 68, 
+          scanId: 'scan4',
+          permalink: 'https://virustotal.com/scan4'
+        },
+        communityRating: {
+          confidence: 0.95,
+          safeVotes: 52,
+          unsafeVotes: 3
+        },
+        userRating: 'safe',
+        scanDuration: 980,
+        isMockData: true
+      },
+      {
+        id: '5',
+        qrData: 'mailto:support@example.com?subject=Help%20Request',
+        timestamp: now - 10800000, // 3 hours ago
+        safetyStatus: 'safe',
+        communityRating: {
+          confidence: 0.87,
+          safeVotes: 23,
+          unsafeVotes: 2
+        },
+        scanDuration: 320,
+        isMockData: true
+      },
+      {
+        id: '6',
+        qrData: 'http://suspicious-redirect.net/click',
+        url: 'http://suspicious-redirect.net/click',
+        timestamp: now - 14400000, // 4 hours ago
+        safetyStatus: 'unsafe',
+        virusTotalResult: { 
+          isSecure: false, 
+          positives: 12, 
+          total: 65,
+          scanId: 'scan6',
+          permalink: 'https://virustotal.com/scan6'
+        },
+        communityRating: {
+          confidence: 0.23,
+          safeVotes: 3,
+          unsafeVotes: 18
+        },
+        userRating: 'unsafe',
+        scanDuration: 2100,
+        isMockData: true
+      },
+      {
+        id: '7',
+        qrData: 'https://www.wikipedia.org',
+        url: 'https://www.wikipedia.org',
+        timestamp: now - 21600000, // 6 hours ago
+        safetyStatus: 'safe',
+        virusTotalResult: { 
+          isSecure: true, 
+          positives: 0, 
+          total: 71, 
+          scanId: 'scan7',
+          permalink: 'https://virustotal.com/scan7'
+        },
+        communityRating: {
+          confidence: 0.99,
+          safeVotes: 78,
+          unsafeVotes: 0
+        },
+        scanDuration: 1450,
+        isMockData: true
+      },
+      {
+        id: '8',
+        qrData: 'tel:+1-555-123-4567',
+        timestamp: now - 25200000, // 7 hours ago
+        safetyStatus: 'unknown',
+        scanDuration: 200,
+        isMockData: true
+      },
+      {
+        id: '9',
+        qrData: 'https://secure-banking.example.com/login',
+        url: 'https://secure-banking.example.com/login',
+        timestamp: now - 32400000, // 9 hours ago
+        safetyStatus: 'safe',
+        virusTotalResult: { 
+          isSecure: true, 
+          positives: 1, 
+          total: 69, 
+          scanId: 'scan9',
+          permalink: 'https://virustotal.com/scan9'
+        },
+        communityRating: {
+          confidence: 0.91,
+          safeVotes: 34,
+          unsafeVotes: 4
+        },
+        userRating: 'safe',
+        scanDuration: 1800,
+        isMockData: true
+      },
+      {
+        id: '10',
+        qrData: 'https://fake-security-alert.com/urgent',
+        url: 'https://fake-security-alert.com/urgent',
+        timestamp: now - 39600000, // 11 hours ago
+        safetyStatus: 'unsafe',
+        virusTotalResult: { 
+          isSecure: false, 
+          positives: 45, 
+          total: 73,
+          scanId: 'scan10',
+          permalink: 'https://virustotal.com/scan10'
+        },
+        communityRating: {
+          confidence: 0.08,
+          safeVotes: 1,
+          unsafeVotes: 28
+        },
+        scanDuration: 3200,
+        isMockData: true
+      },
+      {
+        id: '11',
+        qrData: 'WiFi:T:WEP;S:OpenWiFi;P:;H:false;;',
+        timestamp: now - 46800000, // 13 hours ago
+        safetyStatus: 'unknown',
+        scanDuration: 380,
+        isMockData: true
+      },
+      {
+        id: '12',
+        qrData: 'https://stackoverflow.com/questions/12345',
+        url: 'https://stackoverflow.com/questions/12345',
+        timestamp: now - 86400000, // 1 day ago
+        safetyStatus: 'safe',
+        virusTotalResult: { 
+          isSecure: true, 
+          positives: 0, 
+          total: 70, 
+          scanId: 'scan12',
+          permalink: 'https://virustotal.com/scan12'
+        },
+        communityRating: {
+          confidence: 0.96,
+          safeVotes: 67,
+          unsafeVotes: 2
+        },
+        scanDuration: 1100,
+        isMockData: true
+      },
+      {
+        id: '13',
+        qrData: 'sms:555-0123:Meeting at 3pm today',
+        timestamp: now - 172800000, // 2 days ago
+        safetyStatus: 'safe',
+        communityRating: {
+          confidence: 0.85,
+          safeVotes: 15,
+          unsafeVotes: 1
+        },
+        scanDuration: 250,
+        isMockData: true
+      },
+      {
+        id: '14',
+        qrData: 'https://malware-download.net/trojan.exe',
+        url: 'https://malware-download.net/trojan.exe',
+        timestamp: now - 259200000, // 3 days ago
+        safetyStatus: 'unsafe',
+        virusTotalResult: { 
+          isSecure: false, 
+          positives: 67, 
+          total: 72,
+          scanId: 'scan14',
+          permalink: 'https://virustotal.com/scan14'
+        },
+        communityRating: {
+          confidence: 0.02,
+          safeVotes: 0,
+          unsafeVotes: 42
+        },
+        userRating: 'unsafe',
+        scanDuration: 4500,
+        isMockData: true
+      },
+      {
+        id: '15',
+        qrData: 'geo:37.7749,-122.4194',
+        timestamp: now - 604800000, // 1 week ago
+        safetyStatus: 'safe',
+        communityRating: {
+          confidence: 0.92,
+          safeVotes: 28,
+          unsafeVotes: 3
+        },
+        scanDuration: 150,
+        isMockData: true
       }
     ];
     
@@ -257,7 +462,6 @@ export default function SettingsScreen() {
               await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(combinedHistory));
               
               console.log('Mock scans imported successfully, total entries:', combinedHistory.length);
-              Alert.alert('Success', `Imported ${mockData.length} mock scans for demonstration`);
             } catch (error) {
               console.log('Error importing mock scans:', error);
               Alert.alert('Error', 'Failed to import mock scans');
