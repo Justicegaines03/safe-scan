@@ -2149,7 +2149,10 @@ export default function ScanHistoryScreen() {
           {/* Logo and Version Footer */}
           <View style={styles.logoFooter}>
             <Image 
-              source={require('@/assets/images/Icon-Light.png')} 
+              source={colorScheme === 'dark' 
+                ? require('@/assets/images/Icon-Dark.png')
+                : require('@/assets/images/Icon-Light.png')
+              }
               style={styles.footerLogoImage}
               resizeMode="contain"
             />
@@ -2186,14 +2189,26 @@ export default function ScanHistoryScreen() {
   return (
     <ThemedView style={styles.container}>
       {/* Header with SafeScan logo and settings (copied from scanner tab) */}
-      <View style={styles.headerContainer}>
+      <View style={[
+        styles.headerContainer,
+        { backgroundColor: colorScheme === 'dark' ? '#174534' : '#007031' }
+      ]}>
         <View style={styles.logoTextContainer}>
           <Image 
-            source={require('@/assets/images/Icon-Light.png')}
+            source={colorScheme === 'dark' 
+              ? require('@/assets/images/Icon-Dark.png')
+              : require('@/assets/images/Icon-Light.png')
+            }
             style={styles.logoImage}
             resizeMode="contain"
           />
-          <Text style={[styles.logoText, { marginLeft: 2 }]}>SafeScan</Text>
+          <Text style={[
+            styles.logoText, 
+            { 
+              marginLeft: 2, 
+              color: colorScheme === 'dark' ? '#fce023' : '#fffb00' 
+            }
+          ]}>SafeScan</Text>
         </View>
         <TouchableOpacity 
           style={styles.settingsButton}

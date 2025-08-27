@@ -445,7 +445,10 @@ export default function SettingsScreen() {
         <View style={styles.logoFooter}>
           <View style={styles.footerLogoContainer}>
             <Image 
-              source={require('@/assets/images/Icon-Light.png')}
+              source={colorScheme === 'dark' 
+                ? require('@/assets/images/Icon-Dark.png')
+                : require('@/assets/images/Icon-Light.png')
+              }
               style={styles.footerLogoImage}
               resizeMode="contain"
             />

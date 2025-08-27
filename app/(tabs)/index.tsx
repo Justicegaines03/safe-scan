@@ -9,22 +9,13 @@ import {
   Dimensions, 
   ActivityIndicator,
   TouchableOpacity,
-  Modal,
   TextInput,
-  ScrollView,
   Platform,
   Linking,
-  Image,
-  Share
+  Image
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PanGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring, 
-  runOnJS 
-} from 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -100,7 +91,6 @@ export default function CameraScannerScreen() {
   const [showUserRating, setShowUserRating] = useState(false);
   const [lastScanTime, setLastScanTime] = useState(0);
   const [scanCount, setScanCount] = useState(0);
-  const [showSettings, setShowSettings] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
   const [isTabFocused, setIsTabFocused] = useState(true); // Track if this tab is focused
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
@@ -850,185 +840,6 @@ export default function CameraScannerScreen() {
     setCameraType(current => current === 'back' ? 'front' : 'back');
   };
 
-  // Settings functionality - shared with explore tab
-  const STORAGE_KEY = '@safe_scan_history';
-
-  const getHistoryFromStorage = async () => {
-    try {
-      const data = await AsyncStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error loading history:', error);
-      return [];
-    }
-  };
-
-  const exportToCSV = async () => {
-    try {
-      const history = await getHistoryFromStorage();
-      const csvHeader = 'ID,QR Data,URL,Timestamp,Date,Safety Status,VirusTotal Secure,VirusTotal Positives,VirusTotal Total,Community Safe Votes,Community Unsafe Votes,Community Confidence,User Tag,Scan Duration (ms)\n';
-      
-      const csvRows = history.map((entry: any) => {
-        const date = new Date(entry.timestamp).toISOString();
-        const url = entry.url || '';
-        const vtSecure = entry.virusTotalResult?.isSecure || '';
-        const vtPositives = entry.virusTotalResult?.positives || '';
-        const vtTotal = entry.virusTotalResult?.total || '';
-        const communitySafe = entry.communityRating?.safeVotes || '';
-        const communityUnsafe = entry.communityRating?.unsafeVotes || '';
-        const communityConf = entry.communityRating?.confidence || '';
-        const userTag = entry.userTag || '';
-        const scanDuration = entry.scanDuration || '';
-        
-        // Escape quotes and commas in data
-        const escapeCSV = (field: any) => {
-          const str = String(field);
-          if (str.includes('"') || str.includes(',') || str.includes('\n')) {
-            return `"${str.replace(/"/g, '""')}"`;
-          }
-          return str;
-        };
-        
-        return `${escapeCSV(entry.id)},${escapeCSV(entry.qrData)},${escapeCSV(url)},${entry.timestamp},${escapeCSV(date)},${escapeCSV(entry.safetyStatus)},${escapeCSV(vtSecure)},${escapeCSV(vtPositives)},${escapeCSV(vtTotal)},${escapeCSV(communitySafe)},${escapeCSV(communityUnsafe)},${escapeCSV(communityConf)},${escapeCSV(userTag)},${escapeCSV(scanDuration)}`;
-      }).join('\n');
-      
-      const csvContent = csvHeader + csvRows;
-      const fileName = `safescan_history_${new Date().toISOString().split('T')[0]}.csv`;
-      
-      if (Platform.OS === 'web') {
-        // For web, create download
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else {
-        // For mobile, use Share API
-        await Share.share({
-          message: csvContent,
-          title: 'SafeScan History CSV Export'
-        });
-      }
-      
-      Alert.alert('Success', `Exported ${history.length} scans to CSV format`);
-    } catch (error) {
-      console.error('CSV Export Error:', error);
-      Alert.alert('Error', 'Failed to export CSV file');
-    }
-  };
-
-  const exportToJSON = async () => {
-    try {
-      const history = await getHistoryFromStorage();
-      const exportData = {
-        exportDate: new Date().toISOString(),
-        exportFormat: 'JSON',
-        appVersion: '1.0.0',
-        totalEntries: history.length,
-        entries: history
-      };
-      
-      const jsonString = JSON.stringify(exportData, null, 2);
-      const fileName = `safescan_history_${new Date().toISOString().split('T')[0]}.json`;
-      
-      if (Platform.OS === 'web') {
-        // For web, create download
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else {
-        // For mobile, use Share API
-        await Share.share({
-          message: jsonString,
-          title: 'SafeScan History JSON Export'
-        });
-      }
-      
-      Alert.alert('Success', `Exported ${history.length} scans to JSON format`);
-    } catch (error) {
-      console.error('JSON Export Error:', error);
-      Alert.alert('Error', 'Failed to export JSON file');
-    }
-  };
-
-  const getStorageInfo = async () => {
-    try {
-      const history = await getHistoryFromStorage();
-      const keys = await AsyncStorage.getAllKeys();
-      const safeScanKeys = keys.filter(key => key.includes('safe_scan'));
-      
-      // Get user ID debug info
-      const userDebugInfo = await userIdentityService.getDebugInfo();
-      const currentUserId = await userIdentityService.getUserId();
-      
-      let totalSize = 0;
-      for (const key of safeScanKeys) {
-        const value = await AsyncStorage.getItem(key);
-        if (value) {
-          totalSize += new Blob([value]).size;
-        }
-      }
-      
-      const sizeInKB = (totalSize / 1024).toFixed(2);
-      
-      Alert.alert(
-        'Storage Information',
-        `History Entries: ${history.length}\nStorage Keys: ${safeScanKeys.length}\nApproximate Size: ${sizeInKB} KB\n\nUser ID: ${currentUserId}\nCached ID: ${userDebugInfo.cachedId || 'None'}\nPrimary Stored: ${userDebugInfo.primaryStored ? 'Yes' : 'No'}\nBackup Stored: ${userDebugInfo.backupStored ? 'Yes' : 'No'}\n\nOldest Entry: ${history.length > 0 ? new Date(Math.min(...history.map((h: any) => h.timestamp))).toLocaleDateString() : 'None'}\nNewest Entry: ${history.length > 0 ? new Date(Math.max(...history.map((h: any) => h.timestamp))).toLocaleDateString() : 'None'}`
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to retrieve storage information');
-    }
-  };
-
-  const clearHistory = () => {
-    Alert.alert(
-      'Clear History',
-      'Are you sure you want to clear all scan history? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AsyncStorage.removeItem(STORAGE_KEY);
-              Alert.alert('Success', 'All scan history has been cleared');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to clear history');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const resetUserId = () => {
-    Alert.alert(
-      'Reset User ID',
-      'This will reset your device user ID for testing duplicate vote prevention. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const newUserId = await userIdentityService.resetUserId();
-              Alert.alert('Success', `User ID reset. New ID: ${newUserId}`);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to reset user ID');
-            }
-          }
-        }
-      ]
-    );
-  };
 
   const openLink = async (url: string) => {
     try {
@@ -1067,13 +878,6 @@ export default function CameraScannerScreen() {
     }
   };
 
-  const translateX = useSharedValue(0);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: translateX.value }],
-    };
-  });
 
   
 //JSX UX
@@ -1119,14 +923,26 @@ export default function CameraScannerScreen() {
       <GestureHandlerRootView style={styles.container}>
         <ThemedView style={styles.container}>
           {/* Header with logo and settings */}
-          <View style={styles.headerContainer}>
+          <View style={[
+            styles.headerContainer,
+            { backgroundColor: colorScheme === 'dark' ? '#174534' : '#007031' }
+          ]}>
             <View style={styles.logoTextContainer}>
               <Image 
-              source={require('@/assets/images/Icon-Light.png')}
+              source={colorScheme === 'dark' 
+                ? require('@/assets/images/Icon-Dark.png')
+                : require('@/assets/images/Icon-Light.png')
+              }
               style={styles.logoImage}
               resizeMode="contain"
               />
-              <Text style={[styles.logoText, { marginLeft: 2 }]}>SafeScan</Text>
+              <Text style={[
+                styles.logoText, 
+                { 
+                  marginLeft: 2, 
+                  color: colorScheme === 'dark' ? '#fce023' : '#fffb00' 
+                }
+              ]}>SafeScan</Text>
             </View>
             <TouchableOpacity 
               style={styles.settingsButton}
@@ -1509,18 +1325,30 @@ export default function CameraScannerScreen() {
     <GestureHandlerRootView style={styles.container}>
       <ThemedView style={styles.container}>
         {/* Header with logo and settings */}
-        <View style={styles.headerContainer}>
+        <View style={[
+          styles.headerContainer,
+          { backgroundColor: colorScheme === 'dark' ? '#174534' : '#007031' }
+        ]}>
           <View style={styles.logoTextContainer}>
             <Image 
-              source={require('@/assets/images/Icon-Light.png')}
+              source={colorScheme === 'dark' 
+                ? require('@/assets/images/Icon-Dark.png')
+                : require('@/assets/images/Icon-Light.png')
+              }
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={[styles.logoText, { marginLeft: 2 }]}>SafeScan</Text>
+            <Text style={[
+              styles.logoText, 
+              { 
+                marginLeft: 2, 
+                color: colorScheme === 'dark' ? '#fce023' : '#fffb00' 
+              }
+            ]}>SafeScan</Text>
           </View>
           <TouchableOpacity 
             style={styles.settingsButton}
-            onPress={() => setShowSettings(true)}
+            onPress={() => router.push('/settings')}
           >
             <SymbolView 
               name="gear" 
@@ -1579,149 +1407,6 @@ export default function CameraScannerScreen() {
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
-
-      {/* Settings Modal */}
-      <Modal
-        visible={showSettings}
-        animationType="slide"
-        onRequestClose={() => setShowSettings(false)}
-      >
-        <ThemedView style={styles.modalContainer}>
-          <ScrollView style={styles.detailsContent}>
-            <View style={styles.settingsHeader}>
-              <View style={styles.headerSpacer} />
-              <ThemedText type="subtitle" style={styles.centeredTitle}>Settings</ThemedText>
-              <TouchableOpacity
-                onPress={() => setShowSettings(false)}
-                style={styles.doneButton}
-              >
-                <ThemedText style={styles.doneButtonText}>Done</ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            {/* Data Export Section */}
-            <ThemedText style={styles.firstSectionTitle}>Data Export</ThemedText>
-            
-            <TouchableOpacity
-              style={styles.settingsListItem}
-              onPress={exportToCSV}
-            >
-              <View style={styles.settingsItemContent}>
-                <View style={styles.settingsItemTextContainer}>
-                  <ThemedText style={styles.settingsItemTitle}>Export as CSV</ThemedText>
-                  <ThemedText style={styles.settingsItemSubtitle}>
-                    Download scan history in spreadsheet format
-                  </ThemedText>
-                </View>
-                <ThemedText style={styles.chevronText}>›</ThemedText>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.settingsListItem}
-              onPress={exportToJSON}
-            >
-              <View style={styles.settingsItemContent}>
-                <View style={styles.settingsItemTextContainer}>
-                  <ThemedText style={styles.settingsItemTitle}>Export as JSON</ThemedText>
-                  <ThemedText style={styles.settingsItemSubtitle}>
-                    Download full data with metadata
-                  </ThemedText>
-                </View>
-                <ThemedText style={styles.chevronText}>›</ThemedText>
-              </View>
-            </TouchableOpacity>
-
-            {/* Data Management Section */}
-            <ThemedText style={styles.settingsSectionTitle}>Data Management</ThemedText>
-            
-            <TouchableOpacity
-              style={styles.settingsListItem}
-              onPress={getStorageInfo}
-            >
-              <View style={styles.settingsItemContent}>
-                <View style={styles.settingsItemTextContainer}>
-                  <ThemedText style={styles.settingsItemTitle}>Storage Information</ThemedText>
-                  <ThemedText style={styles.settingsItemSubtitle}>
-                    View data usage and statistics
-                  </ThemedText>
-                </View>
-                <ThemedText style={styles.chevronText}>›</ThemedText>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.settingsListItem}
-              onPress={() => {
-                clearHistory();
-              }}
-            >
-              <View style={styles.settingsItemContent}>
-                <View style={styles.settingsItemTextContainer}>
-                  <ThemedText style={styles.settingsItemTitle}>Clear All History</ThemedText>
-                  <ThemedText style={styles.settingsItemSubtitle}>
-                    Permanently delete all scan records
-                  </ThemedText>
-                </View>
-                <ThemedText style={styles.chevronText}>›</ThemedText>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.settingsListItem}
-              onPress={() => {
-                resetUserId();
-              }}
-            >
-              <View style={styles.settingsItemContent}>
-                <View style={styles.settingsItemTextContainer}>
-                  <ThemedText style={styles.settingsItemTitle}>Reset User ID (Testing)</ThemedText>
-                  <ThemedText style={styles.settingsItemSubtitle}>
-                    Reset device user ID for duplicate rating testing
-                  </ThemedText>
-                </View>
-                <ThemedText style={styles.chevronText}>›</ThemedText>
-              </View>
-            </TouchableOpacity>
-
-            {/* Privacy Section */}
-            <ThemedText style={styles.settingsSectionTitle}>Privacy</ThemedText>
-            
-            <TouchableOpacity
-              style={styles.settingsListItem}
-              onPress={() => {
-                Alert.alert(
-                  'Privacy Information',
-                  'SafeScan processes QR codes locally on your device. Scan history is stored only on your device and is not transmitted to external servers unless you explicitly export it.\n\nVirusTotal integration (when available) may send URLs to VirusTotal for security analysis. Community ratings are aggregated anonymously.',
-                  [{ text: 'OK' }]
-                );
-              }}
-            >
-              <View style={styles.settingsItemContent}>
-                <View style={styles.settingsItemTextContainer}>
-                  <ThemedText style={styles.settingsItemTitle}>Privacy Policy</ThemedText>
-                  <ThemedText style={styles.settingsItemSubtitle}>
-                    How we handle your data
-                  </ThemedText>
-                </View>
-                <ThemedText style={styles.chevronText}>›</ThemedText>
-              </View>
-            </TouchableOpacity>
-
-            {/* Logo and Version Footer */}
-            <View style={styles.logoFooter}>
-              <Image 
-                source={require('@/assets/images/Icon-Light.png')} 
-                style={styles.footerLogoImage}
-                resizeMode="contain"
-              />
-              <View style={styles.versionContainer}>
-                <ThemedText style={styles.versionText}>Version 1.0.0</ThemedText>
-              </View>
-            </View>
-          </ScrollView>
-        </ThemedView>
-      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -2131,7 +1816,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
-    backdropFilter: 'blur(10px)', // For iOS blur effect
   },
   swipeInstructions: {
     alignItems: 'center',
