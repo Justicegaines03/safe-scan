@@ -932,36 +932,6 @@ export default function CameraScannerScreen() {
     }
   };
 
-  // Test deep link functionality (for development/debugging)
-  const testDeepLink = async (linkType: 'scan-qr' | 'quick-scan') => {
-    try {
-      const testURL = `safescan://${linkType}`;
-      console.log('Testing deep link:', testURL);
-      
-      // Simulate deep link trigger
-      setLaunchedViaShortcut(true);
-      setValidationResult(null);
-      setUserRating(null);
-      setShowUserRating(false);
-      setIsValidating(false);
-      scanCooldown.current = 200;
-      setIsScanning(true);
-      
-      // Auto-clear after 3 seconds
-      setTimeout(() => {
-        setLaunchedViaShortcut(false);
-        scanCooldown.current = 500;
-      }, 3000);
-      
-      Alert.alert(
-        'Deep Link Test',
-        `Simulated ${linkType} shortcut activation!\n\nIn production, this would be triggered by:\n• iOS App Shortcuts\n• Android App Shortcuts\n• Control Center widgets\n• Siri Shortcuts`,
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Deep link test error:', error);
-    }
-  };
 
   // Reset the scanner
   const resetScanner = () => {
@@ -1547,13 +1517,6 @@ export default function CameraScannerScreen() {
             <Text style={[styles.buttonText, { color: colors.tint }]}>Manual Input</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={[styles.controlButton, { backgroundColor: '#FFA726' }]}
-            onPress={() => testDeepLink('scan-qr')}
-          >
-            <Text style={styles.buttonText}>Test Link</Text>
-          </TouchableOpacity>
-          
         </ThemedView>
       </ThemedView>
     </GestureHandlerRootView>
@@ -1676,20 +1639,17 @@ const styles = StyleSheet.create({
   controlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    flexWrap: 'wrap', // Allow wrapping for development button
     padding: 0, // Remove all padding
     paddingVertical: 12, // Add minimal vertical padding only
     paddingHorizontal: 16, // Keep horizontal padding for button spacing
     paddingBottom: Platform.OS === 'ios' ? 20 : 12, // Minimal bottom padding for safe area
-    gap: 8, // Add gap between buttons
   },
   controlButton: {
     paddingVertical: 10,
-    paddingHorizontal: 16, // Reduced for better fit
+    paddingHorizontal: 20,
     borderRadius: 8,
-    minWidth: 90, // Reduced for better fit
+    minWidth: 100,
     alignItems: 'center',
-    marginVertical: 4, // Add vertical margin for wrapped buttons
   },
   secondaryButton: {
     backgroundColor: 'transparent',
