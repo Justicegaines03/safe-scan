@@ -9,69 +9,39 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-struct LockScreenWidgetControl: ControlWidget {
-    static let kind: String = "com.justicegaines03.safe-scan.LockScreenWidget"
+struct SafeScanWidgetControl: ControlWidget {
+    static let kind: String = "com.justicegaines03.safe-scan.SafeScanWidget"
 
     var body: some ControlWidgetConfiguration {
         AppIntentControlConfiguration(
             kind: Self.kind,
             provider: Provider()
-        ) { value in
-            ControlWidgetToggle(
-                "Start Timer",
-                isOn: value.isRunning,
-                action: StartTimerIntent(value.name)
-            ) { isRunning in
-                Label(isRunning ? "On" : "Off", systemImage: "timer")
+        ) { _ in
+            ControlWidgetButton(action: OpenSafeScanAppIntent()) {
+                Label("Scan", systemImage: "qrcode.viewfinder")
             }
         }
-        .displayName("Timer")
-        .description("A an example control that runs a timer.")
+        .displayName("SafeScan")
+        .description("Quick access to scan QR codes")
     }
 }
 
-extension LockScreenWidgetControl {
+extension SafeScanWidgetControl {
     struct Value {
-        var isRunning: Bool
-        var name: String
+        // Empty for button control
     }
 
     struct Provider: AppIntentControlValueProvider {
-        func previewValue(configuration: TimerConfiguration) -> Value {
-            LockScreenWidgetControl.Value(isRunning: false, name: configuration.timerName)
+        func previewValue(configuration: SafeScanConfiguration) -> Value {
+            SafeScanWidgetControl.Value()
         }
 
-        func currentValue(configuration: TimerConfiguration) async throws -> Value {
-            let isRunning = true // Check if the timer is running
-            return LockScreenWidgetControl.Value(isRunning: isRunning, name: configuration.timerName)
+        func currentValue(configuration: SafeScanConfiguration) async throws -> Value {
+            return SafeScanWidgetControl.Value()
         }
     }
 }
 
-struct TimerConfiguration: ControlConfigurationIntent {
-    static let title: LocalizedStringResource = "Timer Name Configuration"
-
-    @Parameter(title: "Timer Name", default: "Timer")
-    var timerName: String
-}
-
-struct StartTimerIntent: SetValueIntent {
-    static let title: LocalizedStringResource = "Start a timer"
-
-    @Parameter(title: "Timer Name")
-    var name: String
-
-    @Parameter(title: "Timer is running")
-    var value: Bool
-
-    init() {}
-
-    init(_ name: String) {
-        self.name = name
-    }
-
-    func perform() async throws -> some IntentResult {
-        // Start the timer…
-        return .result()
-    }
+struct SafeScanConfiguration: ControlConfigurationIntent {
+    static let title: LocalizedStringResource = "SafeScan Configuration"
 }

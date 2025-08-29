@@ -9,12 +9,8 @@ import WidgetKit
 import AppIntents
 
 struct ConfigurationAppIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource { "Configuration" }
+    static var title: LocalizedStringResource { "SafeScan Configuration" }
     static var description: IntentDescription { "Configure your SafeScan widget." }
-
-    // An example configurable parameter.
-    @Parameter(title: "Favorite Emoji", default: "😃")
-    var favoriteEmoji: String
 }
 
 struct OpenSafeScanAppIntent: AppIntent {

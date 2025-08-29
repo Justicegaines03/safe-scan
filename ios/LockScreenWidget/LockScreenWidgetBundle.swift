@@ -11,9 +11,6 @@ import SwiftUI
 @main
 struct LockScreenWidgetBundle: WidgetBundle {
     var body: some Widget {
-        #if DEBUG
         LockScreenWidget()
-        LockScreenWidgetControl()
-        #endif
     }
 }

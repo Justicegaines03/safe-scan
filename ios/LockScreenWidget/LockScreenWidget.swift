@@ -45,69 +45,23 @@ struct LockScreenWidgetEntryView : View {
     var entry: Provider.Entry
 
     var body: some View {
-        // Lock screen rectangular widget only
         Link(destination: URL(string: "safescan://")!) {
             HStack(spacing: 8) {
-                // SafeScan logo area
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(.blue.gradient)
-                        .frame(width: 28, height: 28)
-                    
-                    // Use system icon for now to prevent crashes
-                    Image(systemName: "qrcode.viewfinder")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack {
-                        Text("SafeScan")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.primary)
-                        Spacer()
-                    }
-                }
-                
-                Spacer()
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-        }
-    }
-}
-
-
-struct LockScreenMediumWidgetEntryView : View {
-    var entry: Provider.Entry
-
-    var body: some View {
-        Link(destination: URL(string: "safescan://")!) {
-            HStack(spacing: 8) {
-                ZStack {
-//                    RoundedRectangle(cornerRadius: 10)
-//                        .fill(.blue.gradient)
-//                        .frame(width: 40, height: 40)
-                    
-                    Image(systemName: "qrcode.viewfinder")
-                        .font(.system(size: 40, weight: .semibold))
-                        .foregroundColor(.white)
-                }
+                Image(systemName: "qrcode.viewfinder")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.primary)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("SafeScan")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.primary)
-//                    Text("Quick scan")
-//                        .font(.system(size: 12, weight: .medium))
-//                        .foregroundColor(.secondary)
                 }
                 
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.horizontal, 15)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
         }
     }
 }
@@ -119,7 +73,7 @@ struct LockScreenWidget: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
-            LockScreenMediumWidgetEntryView(entry: entry)
+            LockScreenWidgetEntryView(entry: entry)
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("SafeScan Lock Screen Widget")
@@ -130,15 +84,8 @@ struct LockScreenWidget: Widget {
 
 
 extension ConfigurationAppIntent {
-    fileprivate static var smiley: ConfigurationAppIntent {
+    fileprivate static var defaultConfig: ConfigurationAppIntent {
         let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "😀"
-        return intent
-    }
-    
-    fileprivate static var starEyes: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "🤩"
         return intent
     }
 }
@@ -146,5 +93,5 @@ extension ConfigurationAppIntent {
 #Preview("SafeScan Lock Screen Widget", as: .accessoryRectangular) {
     LockScreenWidget()
 } timeline: {
-    SimpleEntry(date: .now, configuration: .smiley)
+    SimpleEntry(date: .now, configuration: .defaultConfig)
 }
