@@ -15,7 +15,7 @@
 		E350B44EDED014C6A03168C7 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159039FA55169BA0513A21F1 /* ExpoModulesProvider.swift */; };
 		E9F163282E60D933004A13EA /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9F163272E60D933004A13EA /* WidgetKit.framework */; };
 		E9F1632A2E60D933004A13EA /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9F163292E60D933004A13EA /* SwiftUI.framework */; };
-		E9F163392E60D934004A13EA /* LockScreenWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9F163262E60D933004A13EA /* LockScreenWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E9F163392E60D934004A13EA /* LockScreenWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9F163262E60D933004A13EA /* LockScreenWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; platformFilters = (ios, ); };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -40,6 +40,7 @@
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
+			runOnlyWhenInstalling = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -717,6 +718,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

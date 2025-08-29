@@ -77,19 +77,57 @@ struct LockScreenWidgetEntryView : View {
     }
 }
 
+
+struct LockScreenMediumWidgetEntryView : View {
+    var entry: Provider.Entry
+
+    var body: some View {
+        Link(destination: URL(string: "safescan://")!) {
+            HStack(spacing: 8) {
+                ZStack {
+//                    RoundedRectangle(cornerRadius: 10)
+//                        .fill(.blue.gradient)
+//                        .frame(width: 40, height: 40)
+                    
+                    Image(systemName: "qrcode.viewfinder")
+                        .font(.system(size: 40, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("SafeScan")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.primary)
+//                    Text("Quick scan")
+//                        .font(.system(size: 12, weight: .medium))
+//                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 15)
+            .padding(.vertical, 4)
+        }
+    }
+}
+
+
+
 struct LockScreenWidget: Widget {
     let kind: String = "LockScreenWidget"
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
-            LockScreenWidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+            LockScreenMediumWidgetEntryView(entry: entry)
+                .containerBackground(.clear, for: .widget)
         }
-        .configurationDisplayName("SafeScan")
-        .description("Quick access to scan QR codes and files")
+        .configurationDisplayName("SafeScan Lock Screen Widget")
+        .description("Quick access to scan from lock screen")
         .supportedFamilies([.accessoryRectangular])
     }
 }
+
 
 extension ConfigurationAppIntent {
     fileprivate static var smiley: ConfigurationAppIntent {
