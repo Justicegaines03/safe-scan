@@ -35,7 +35,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -102,7 +102,6 @@ const { width, height } = Dimensions.get('window');
 export default function CameraScannerScreen() {
   const colorScheme = useColorScheme();
   const [permission, requestPermission] = useCameraPermissions();
-  const [cameraType, setCameraType] = useState<CameraType>('back');
   const [isScanning, setIsScanning] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -110,7 +109,6 @@ export default function CameraScannerScreen() {
   const [showUserRating, setShowUserRating] = useState(false);
   const [lastScanTime, setLastScanTime] = useState(0);
   const [scanCount, setScanCount] = useState(0);
-  const [showManualInput, setShowManualInput] = useState(false);
   const [isTabFocused, setIsTabFocused] = useState(true); // Track if this tab is focused
   const [launchedViaShortcut, setLaunchedViaShortcut] = useState(false); // Track shortcut launches
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
@@ -920,10 +918,6 @@ export default function CameraScannerScreen() {
     isSaving.current = false; // Reset saving flag
   };
 
-  // Toggles camera back and front
-  const toggleCamera = () => {
-    setCameraType(current => current === 'back' ? 'front' : 'back');
-  };
 
 
   const openLink = async (url: string) => {
@@ -991,12 +985,6 @@ export default function CameraScannerScreen() {
           >
             <Text style={styles.buttonText}>Grant Permission</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.button, styles.secondaryButton]} 
-            onPress={() => setShowManualInput(true)}
-          >
-            <Text style={[styles.buttonText, { color: colors.tint }]}>Enter URL Manually</Text>
-          </TouchableOpacity>
         </ThemedView>
       </ThemedView>
     );
@@ -1012,7 +1000,7 @@ export default function CameraScannerScreen() {
           <View style={styles.cameraContainer}>
             <CameraView
               style={styles.camera}
-              facing={cameraType}
+              facing="back"
               onBarcodeScanned={undefined} // Disable scanning while showing results
               barcodeScannerSettings={{
                 barcodeTypes: ['qr'],
@@ -1381,7 +1369,7 @@ export default function CameraScannerScreen() {
         <View style={styles.cameraContainer}>
           <CameraView
             style={styles.camera}
-            facing={cameraType}
+            facing="back"
             onBarcodeScanned={isScanning && isTabFocused ? handleQRCodeScanned : undefined}
             barcodeScannerSettings={{
               barcodeTypes: ['qr'],
@@ -1411,22 +1399,6 @@ export default function CameraScannerScreen() {
           )}
         </View>
 
-        <ThemedView style={styles.controlsContainer}>
-          <TouchableOpacity 
-            style={[styles.controlButton, { backgroundColor: colors.tint }]}
-            onPress={toggleCamera}
-          >
-            <Text style={styles.buttonText}>Flip Camera</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.controlButton, styles.secondaryButton]}
-            onPress={() => setShowManualInput(true)}
-          >
-            <Text style={[styles.buttonText, { color: colors.tint }]}>Manual Input</Text>
-          </TouchableOpacity>
-          
-        </ThemedView>
       </ThemedView>
     </GestureHandlerRootView>
   );
@@ -1503,27 +1475,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  
-  controlsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 0, // Remove all padding
-    paddingVertical: 12, // Add minimal vertical padding only
-    paddingHorizontal: 16, // Keep horizontal padding for button spacing
-    paddingBottom: Platform.OS === 'ios' ? 20 : 12, // Minimal bottom padding for safe area
-  },
-  controlButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#007AFF',
-  },
   button: {
     paddingVertical: 12,
     paddingHorizontal: 24,
