@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { router } from 'expo-router';
 import {
   StyleSheet,
   View,
@@ -2183,42 +2182,6 @@ export default function ScanHistoryScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Header with SafeScan logo and settings (copied from scanner tab) */}
-      <View style={[
-        styles.headerContainer,
-        { backgroundColor: colorScheme === 'dark' ? '#174534' : '#007031' }
-      ]}>
-        <View style={styles.logoTextContainer}>
-          <Image 
-            source={colorScheme === 'dark' 
-              ? require('@/assets/images/Icon-Dark.png')
-              : require('@/assets/images/Icon-Light.png')
-            }
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={[
-            styles.logoText, 
-            { 
-              marginLeft: 2, 
-              color: colorScheme === 'dark' ? '#fce023' : '#fffb00' 
-            }
-          ]}>SafeScan</Text>
-        </View>
-        <TouchableOpacity 
-          style={styles.settingsButton}
-          onPress={() => {
-            console.log('Settings button pressed');
-            router.push('/settings');
-          }}
-        >
-          <SymbolView 
-            name="gear" 
-            size={35}
-            tintColor="#FFFFFF" 
-          />
-        </TouchableOpacity>
-      </View>
 
       {/* History section with title and action icons (below main header) */}
       <View style={styles.header}>
@@ -2409,44 +2372,6 @@ export default function ScanHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  headerContainer: {
-    position: 'absolute',
-    top: 0, // Changed to 0 to reach the very top
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    zIndex: 10,
-    backgroundColor: '#007031', // Green background to match app theme
-    paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 60 : 25, // Add top padding for status bar/notch
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-  },
-  logoTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: 40,
-    height: 40,
-  },
-  logoText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fffb00',
-    marginLeft: 8,
-  },
-  settingsButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   loadingContainer: {
     flex: 1,

@@ -21,7 +21,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { router } from 'expo-router';
 import { 
   StyleSheet, 
   View, 
@@ -32,8 +31,7 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
-  Linking,
-  Image
+  Linking
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -1032,39 +1030,6 @@ export default function CameraScannerScreen() {
     return (
       <GestureHandlerRootView style={styles.container}>
         <ThemedView style={styles.container}>
-          {/* Header with logo and settings */}
-          <View style={[
-            styles.headerContainer,
-            { backgroundColor: colorScheme === 'dark' ? '#174534' : '#007031' }
-          ]}>
-            <View style={styles.logoTextContainer}>
-              <Image 
-              source={colorScheme === 'dark' 
-                ? require('@/assets/images/Icon-Dark.png')
-                : require('@/assets/images/Icon-Light.png')
-              }
-              style={styles.logoImage}
-              resizeMode="contain"
-              />
-              <Text style={[
-                styles.logoText, 
-                { 
-                  marginLeft: 2, 
-                  color: colorScheme === 'dark' ? '#fce023' : '#fffb00' 
-                }
-              ]}>SafeScan</Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.settingsButton}
-              onPress={() => router.push('/settings')}
-            >
-              <SymbolView 
-                name="gear" 
-                size={35}
-                tintColor="#FFFFFF" 
-              />
-            </TouchableOpacity>
-          </View>
 
           {/* Camera background */}
           <View style={styles.cameraContainer}>
@@ -1434,39 +1399,6 @@ export default function CameraScannerScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <ThemedView style={styles.container}>
-        {/* Header with logo and settings */}
-        <View style={[
-          styles.headerContainer,
-          { backgroundColor: colorScheme === 'dark' ? '#174534' : '#007031' }
-        ]}>
-          <View style={styles.logoTextContainer}>
-            <Image 
-              source={colorScheme === 'dark' 
-                ? require('@/assets/images/Icon-Dark.png')
-                : require('@/assets/images/Icon-Light.png')
-              }
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-            <Text style={[
-              styles.logoText, 
-              { 
-                marginLeft: 2, 
-                color: colorScheme === 'dark' ? '#fce023' : '#fffb00' 
-              }
-            ]}>SafeScan</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.settingsButton}
-            onPress={() => router.push('/settings')}
-          >
-            <SymbolView 
-              name="gear" 
-              size={35}
-              tintColor="#FFFFFF" 
-            />
-          </TouchableOpacity>
-        </View>
 
         {/* Camera and scanner */}
         <View style={styles.cameraContainer}>
@@ -1530,47 +1462,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Header
-  headerContainer: {
-    position: 'absolute',
-    top: 0, // Changed to 0 to reach the very top
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    zIndex: 10, // Ensure it's above everything
-    backgroundColor: '#007031', // Green background to match app theme
-    paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 60 : 25, // Add top padding for status bar/notch
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-  },
-  logoTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: 40,
-    height: 40,
-  },
-
-  logoText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fffb00',
-    marginLeft: 8,
-  },
-
-  settingsButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   
   virusTotalIconSize: {
     fontSize: 22
@@ -1594,7 +1485,7 @@ const styles = StyleSheet.create({
   //Camera
   cameraContainer: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 110 : 80, // Padding for header
+    paddingTop: Platform.OS === 'ios' ? 110 : 80, // Padding for persistent header
     },
     camera: {
     flex: 1,
