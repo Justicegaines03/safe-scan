@@ -18,7 +18,7 @@ struct SafeScanWidgetControl: ControlWidget {
             provider: Provider()
         ) { _ in
             ControlWidgetButton(action: OpenSafeScanAppIntent()) {
-                Label("Scan", systemImage: "qrcode.viewfinder")
+                Label("Scan", image: "WidgetLogo")
             }
         }
         .displayName("SafeScan")

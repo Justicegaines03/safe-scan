@@ -12,5 +12,6 @@ import SwiftUI
 struct LockScreenWidgetBundle: WidgetBundle {
     var body: some Widget {
         LockScreenWidget()
+        SafeScanWidgetControl()
     }
 }

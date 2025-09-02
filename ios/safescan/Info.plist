@@ -32,6 +32,12 @@
           <string>safescan</string>
         </array>
       </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+safe-scan</string>
+        </array>
+      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>
@@ -48,8 +54,12 @@
     </dict>
     <key>NSCameraUsageDescription</key>
     <string>SafeScan needs camera access to scan QR codes for security analysis.</string>
+    <key>NSSupportsLiveActivities</key>
+    <true/>
     <key>NSUserActivityTypes</key>
     <array>
+      <string>com.justicegaines03.safe-scan.scan-qr-code</string>
+      <string>com.justicegaines03.safe-scan.quick-scan</string>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
     </array>
     <key>UILaunchStoryboardName</key>

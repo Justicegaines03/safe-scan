@@ -9,73 +9,73 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		4FC5E397517D714EA4225189 /* libPods-safescan.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B81EA00428F26BD7EF1B6D8F /* libPods-safescan.a */; };
-		6C5864C2A12F6EFB0CB821F9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 74F0D225C1DD77C366E936D1 /* PrivacyInfo.xcprivacy */; };
+		5BA117C272C5D5A2F48934C9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8C23F19B222DC9FAB718C372 /* PrivacyInfo.xcprivacy */; };
+		7B9F04F85240FE83916BAF25 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945DB8DA7BD0B719606FC9F7 /* ExpoModulesProvider.swift */; };
+		B786E25B62BCF5B275D8DDB3 /* libPods-SafeScan.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F479039224E0CCFF3EF6E3DD /* libPods-SafeScan.a */; };
+		E917EEF42E679D61009644A8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E917EEF32E679D61009644A8 /* Assets.xcassets */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		E350B44EDED014C6A03168C7 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159039FA55169BA0513A21F1 /* ExpoModulesProvider.swift */; };
-		E9F163282E60D933004A13EA /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9F163272E60D933004A13EA /* WidgetKit.framework */; };
-		E9F1632A2E60D933004A13EA /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9F163292E60D933004A13EA /* SwiftUI.framework */; };
-		E9F163392E60D934004A13EA /* LockScreenWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9F163262E60D933004A13EA /* LockScreenWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; platformFilters = (ios, ); };
+		E917EEEF2E679D61009644A8 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E917EEEE2E679D61009644A8 /* WidgetKit.framework */; };
+		E917EEF12E679D61009644A8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E917EEF02E679D61009644A8 /* SwiftUI.framework */; };
+		E917EF002E679D62009644A8 /* LockScreenWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E917EEED2E679D61009644A8 /* LockScreenWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		E9F163372E60D934004A13EA /* PBXContainerItemProxy */ = {
+		E917EEFE2E679D62009644A8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = E9F163252E60D933004A13EA;
-			remoteInfo = LockScreenWidgetExtension;
+			remoteGlobalIDString = E917EEEC2E679D61009644A8;
+			remoteInfo = LockScreenWidgetExtensionExtension;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		E9F1633A2E60D934004A13EA /* Embed Foundation Extensions */ = {
+		E917EF012E679D62009644A8 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				E9F163392E60D934004A13EA /* LockScreenWidgetExtension.appex in Embed Foundation Extensions */,
+				E917EF002E679D62009644A8 /* LockScreenWidgetExtensionExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
-			runOnlyWhenInstalling = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* SafeScan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SafeScan.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = safescan/Images.xcassets; sourceTree = "<group>"; };
-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = safescan/Info.plist; sourceTree = "<group>"; };
-		159039FA55169BA0513A21F1 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-safescan/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		74F0D225C1DD77C366E936D1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = safescan/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		951CB3C956EC2ED35D46212A /* Pods-safescan.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-safescan.release.xcconfig"; path = "Target Support Files/Pods-safescan/Pods-safescan.release.xcconfig"; sourceTree = "<group>"; };
-		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = safescan/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B81EA00428F26BD7EF1B6D8F /* libPods-safescan.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-safescan.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = SafeScan/Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = SafeScan/Info.plist; sourceTree = "<group>"; };
+		5E88E09177D1E2FCADD84481 /* Pods-SafeScan.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SafeScan.release.xcconfig"; path = "Target Support Files/Pods-SafeScan/Pods-SafeScan.release.xcconfig"; sourceTree = "<group>"; };
+		8C23F19B222DC9FAB718C372 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = SafeScan/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		945DB8DA7BD0B719606FC9F7 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-SafeScan/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = SafeScan/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		BF49B54F0CBB08BCB7DC7AA6 /* Pods-safescan.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-safescan.debug.xcconfig"; path = "Target Support Files/Pods-safescan/Pods-safescan.debug.xcconfig"; sourceTree = "<group>"; };
-		E9D5414B2E60E42000C9A6DD /* LockScreenWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LockScreenWidgetExtension.entitlements; sourceTree = "<group>"; };
-		E9F163262E60D933004A13EA /* LockScreenWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LockScreenWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		E9F163272E60D933004A13EA /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
-		E9F163292E60D933004A13EA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		E6BD91AFE63C24CCC0313C06 /* Pods-SafeScan.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SafeScan.debug.xcconfig"; path = "Target Support Files/Pods-SafeScan/Pods-SafeScan.debug.xcconfig"; sourceTree = "<group>"; };
+		E917EEED2E679D61009644A8 /* LockScreenWidgetExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LockScreenWidgetExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E917EEEE2E679D61009644A8 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		E917EEF02E679D61009644A8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		E917EEF32E679D61009644A8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = safescan/AppDelegate.swift; sourceTree = "<group>"; };
-		F11748442D0722820044C1D9 /* safescan-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "safescan-Bridging-Header.h"; path = "safescan/safescan-Bridging-Header.h"; sourceTree = "<group>"; };
+		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = SafeScan/AppDelegate.swift; sourceTree = "<group>"; };
+		F11748442D0722820044C1D9 /* SafeScan-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "SafeScan-Bridging-Header.h"; path = "SafeScan/SafeScan-Bridging-Header.h"; sourceTree = "<group>"; };
+		F479039224E0CCFF3EF6E3DD /* libPods-SafeScan.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SafeScan.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		E9F1633D2E60D934004A13EA /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		E917EF042E679D62009644A8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = E9F163252E60D933004A13EA /* LockScreenWidgetExtension */;
+			target = E917EEEC2E679D61009644A8 /* LockScreenWidgetExtensionExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		E9F1632B2E60D933004A13EA /* LockScreenWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (E9F1633D2E60D934004A13EA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = LockScreenWidget; sourceTree = "<group>"; };
+		E917EEF22E679D61009644A8 /* LockScreenWidgetExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (E917EF042E679D62009644A8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = LockScreenWidgetExtension; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,62 +83,53 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4FC5E397517D714EA4225189 /* libPods-safescan.a in Frameworks */,
+				B786E25B62BCF5B275D8DDB3 /* libPods-SafeScan.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E9F163232E60D933004A13EA /* Frameworks */ = {
+		E917EEEA2E679D61009644A8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E9F1632A2E60D933004A13EA /* SwiftUI.framework in Frameworks */,
-				E9F163282E60D933004A13EA /* WidgetKit.framework in Frameworks */,
+				E917EEF12E679D61009644A8 /* SwiftUI.framework in Frameworks */,
+				E917EEEF2E679D61009644A8 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		13B07FAE1A68108700A75B9A /* safescan */ = {
+		13B07FAE1A68108700A75B9A /* SafeScan */ = {
 			isa = PBXGroup;
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
-				F11748442D0722820044C1D9 /* safescan-Bridging-Header.h */,
+				F11748442D0722820044C1D9 /* SafeScan-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				74F0D225C1DD77C366E936D1 /* PrivacyInfo.xcprivacy */,
+				8C23F19B222DC9FAB718C372 /* PrivacyInfo.xcprivacy */,
 			);
-			name = safescan;
+			name = SafeScan;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				E9F163272E60D933004A13EA /* WidgetKit.framework */,
-				E9F163292E60D933004A13EA /* SwiftUI.framework */,
-				B81EA00428F26BD7EF1B6D8F /* libPods-safescan.a */,
+				F479039224E0CCFF3EF6E3DD /* libPods-SafeScan.a */,
+				E917EEEE2E679D61009644A8 /* WidgetKit.framework */,
+				E917EEF02E679D61009644A8 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		53C8B960FF7C3FABB89F127D /* safescan */ = {
+		51A20350ED12D79CAE6D9FDD /* SafeScan */ = {
 			isa = PBXGroup;
 			children = (
-				159039FA55169BA0513A21F1 /* ExpoModulesProvider.swift */,
+				945DB8DA7BD0B719606FC9F7 /* ExpoModulesProvider.swift */,
 			);
-			name = safescan;
-			sourceTree = "<group>";
-		};
-		58085145C4899249A6DA77A0 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				BF49B54F0CBB08BCB7DC7AA6 /* Pods-safescan.debug.xcconfig */,
-				951CB3C956EC2ED35D46212A /* Pods-safescan.release.xcconfig */,
-			);
-			path = Pods;
+			name = SafeScan;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -151,14 +142,13 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				E9D5414B2E60E42000C9A6DD /* LockScreenWidgetExtension.entitlements */,
-				13B07FAE1A68108700A75B9A /* safescan */,
+				13B07FAE1A68108700A75B9A /* SafeScan */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
-				E9F1632B2E60D933004A13EA /* LockScreenWidget */,
+				E917EEF22E679D61009644A8 /* LockScreenWidgetExtension */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				58085145C4899249A6DA77A0 /* Pods */,
-				F7E162507777B871F0A1C637 /* ExpoModulesProviders */,
+				C8B913106E37F29CBA062D29 /* Pods */,
+				F5749D1DC04205F8B233212C /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -169,7 +159,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* SafeScan.app */,
-				E9F163262E60D933004A13EA /* LockScreenWidgetExtension.appex */,
+				E917EEED2E679D61009644A8 /* LockScreenWidgetExtensionExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -180,13 +170,22 @@
 				BB2F792C24A3F905000567C9 /* Expo.plist */,
 			);
 			name = Supporting;
-			path = safescan/Supporting;
+			path = SafeScan/Supporting;
 			sourceTree = "<group>";
 		};
-		F7E162507777B871F0A1C637 /* ExpoModulesProviders */ = {
+		C8B913106E37F29CBA062D29 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				53C8B960FF7C3FABB89F127D /* safescan */,
+				E6BD91AFE63C24CCC0313C06 /* Pods-SafeScan.debug.xcconfig */,
+				5E88E09177D1E2FCADD84481 /* Pods-SafeScan.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		F5749D1DC04205F8B233212C /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				51A20350ED12D79CAE6D9FDD /* SafeScan */,
 			);
 			name = ExpoModulesProviders;
 			sourceTree = "<group>";
@@ -194,48 +193,50 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		13B07F861A680F5B00A75B9A /* safescan */ = {
+		13B07F861A680F5B00A75B9A /* SafeScan */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "safescan" */;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "SafeScan" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				D03920AB7F09B642F4092292 /* [Expo] Configure project */,
+				A55FA77FACFC4AB2827B94A5 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				E9F1633A2E60D934004A13EA /* Embed Foundation Extensions */,
-				CC6BC582CD6B13A00460C656 /* [CP] Embed Pods Frameworks */,
+				40820339AD42CF7CD35FA5AD /* [CP] Embed Pods Frameworks */,
+				E917EF012E679D62009644A8 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				E9F163382E60D934004A13EA /* PBXTargetDependency */,
+				E917EEFF2E679D62009644A8 /* PBXTargetDependency */,
 			);
-			name = safescan;
-			productName = safescan;
+			name = SafeScan;
+			productName = SafeScan;
 			productReference = 13B07F961A680F5B00A75B9A /* SafeScan.app */;
 			productType = "com.apple.product-type.application";
 		};
-		E9F163252E60D933004A13EA /* LockScreenWidgetExtension */ = {
+		E917EEEC2E679D61009644A8 /* LockScreenWidgetExtensionExtension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E9F1633E2E60D934004A13EA /* Build configuration list for PBXNativeTarget "LockScreenWidgetExtension" */;
+			buildConfigurationList = E917EF052E679D62009644A8 /* Build configuration list for PBXNativeTarget "LockScreenWidgetExtensionExtension" */;
 			buildPhases = (
-				E9F163222E60D933004A13EA /* Sources */,
-				E9F163232E60D933004A13EA /* Frameworks */,
-				E9F163242E60D933004A13EA /* Resources */,
+				E917EEE92E679D61009644A8 /* Sources */,
+				E917EEEA2E679D61009644A8 /* Frameworks */,
+				E917EEEB2E679D61009644A8 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				E9F1632B2E60D933004A13EA /* LockScreenWidget */,
+				E917EEF22E679D61009644A8 /* LockScreenWidgetExtension */,
 			);
-			name = LockScreenWidgetExtension;
-			productName = LockScreenWidgetExtension;
-			productReference = E9F163262E60D933004A13EA /* LockScreenWidgetExtension.appex */;
+			name = LockScreenWidgetExtensionExtension;
+			packageProductDependencies = (
+			);
+			productName = LockScreenWidgetExtensionExtension;
+			productReference = E917EEED2E679D61009644A8 /* LockScreenWidgetExtensionExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -244,19 +245,18 @@
 		83CBB9F71A601CBA00E9B192 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
 					};
-					E9F163252E60D933004A13EA = {
+					E917EEEC2E679D61009644A8 = {
 						CreatedOnToolsVersion = 16.2;
 					};
 				};
 			};
-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "safescan" */;
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "SafeScan" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -269,8 +269,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				13B07F861A680F5B00A75B9A /* safescan */,
-				E9F163252E60D933004A13EA /* LockScreenWidgetExtension */,
+				13B07F861A680F5B00A75B9A /* SafeScan */,
+				E917EEEC2E679D61009644A8 /* LockScreenWidgetExtensionExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -283,14 +283,15 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				6C5864C2A12F6EFB0CB821F9 /* PrivacyInfo.xcprivacy in Resources */,
+				5BA117C272C5D5A2F48934C9 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E9F163242E60D933004A13EA /* Resources */ = {
+		E917EEEB2E679D61009644A8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E917EEF42E679D61009644A8 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -327,11 +328,29 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-safescan-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-SafeScan-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		40820339AD42CF7CD35FA5AD /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-SafeScan/Pods-SafeScan-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-SafeScan/Pods-SafeScan-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
@@ -340,7 +359,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-safescan/Pods-safescan-resources.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-SafeScan/Pods-SafeScan-resources.sh",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/EXConstants.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
@@ -371,28 +390,10 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-safescan/Pods-safescan-resources.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-SafeScan/Pods-SafeScan-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		CC6BC582CD6B13A00460C656 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-safescan/Pods-safescan-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-safescan/Pods-safescan-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D03920AB7F09B642F4092292 /* [Expo] Configure project */ = {
+		A55FA77FACFC4AB2827B94A5 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -409,7 +410,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-safescan/expo-configure-project.sh\"\n";
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-SafeScan/expo-configure-project.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -419,11 +420,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				E350B44EDED014C6A03168C7 /* ExpoModulesProvider.swift in Sources */,
+				7B9F04F85240FE83916BAF25 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E9F163222E60D933004A13EA /* Sources */ = {
+		E917EEE92E679D61009644A8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -433,29 +434,28 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		E9F163382E60D934004A13EA /* PBXTargetDependency */ = {
+		E917EEFF2E679D62009644A8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = E9F163252E60D933004A13EA /* LockScreenWidgetExtension */;
-			targetProxy = E9F163372E60D934004A13EA /* PBXContainerItemProxy */;
+			target = E917EEEC2E679D61009644A8 /* LockScreenWidgetExtensionExtension */;
+			targetProxy = E917EEFE2E679D62009644A8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BF49B54F0CBB08BCB7DC7AA6 /* Pods-safescan.debug.xcconfig */;
+			baseConfigurationReference = E6BD91AFE63C24CCC0313C06 /* Pods-SafeScan.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = safescan/safescan.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SafeScan/SafeScan.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2Y6R52M323;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FB_SONARKIT_ENABLED=1",
 				);
-				INFOPLIST_FILE = safescan/Info.plist;
+				INFOPLIST_FILE = SafeScan/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -470,7 +470,7 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.justicegaines03.safe-scan";
 				PRODUCT_NAME = SafeScan;
-				SWIFT_OBJC_BRIDGING_HEADER = "safescan/safescan-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "SafeScan/SafeScan-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -480,14 +480,13 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 951CB3C956EC2ED35D46212A /* Pods-safescan.release.xcconfig */;
+			baseConfigurationReference = 5E88E09177D1E2FCADD84481 /* Pods-SafeScan.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = safescan/safescan.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SafeScan/SafeScan.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2Y6R52M323;
-				INFOPLIST_FILE = safescan/Info.plist;
+				INFOPLIST_FILE = SafeScan/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -502,7 +501,7 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.justicegaines03.safe-scan";
 				PRODUCT_NAME = SafeScan;
-				SWIFT_OBJC_BRIDGING_HEADER = "safescan/safescan-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "SafeScan/SafeScan-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -513,7 +512,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
@@ -533,7 +531,6 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -578,7 +575,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
@@ -598,7 +594,6 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -626,13 +621,12 @@
 				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
 				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
-		E9F1633B2E60D934004A13EA /* Debug */ = {
+		E917EF022E679D62009644A8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -645,16 +639,14 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CODE_SIGN_ENTITLEMENTS = LockScreenWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 2Y6R52M323;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = LockScreenWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = LockScreenWidget;
+				INFOPLIST_FILE = LockScreenWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LockScreenWidgetExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -666,8 +658,7 @@
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.justicegaines03.safe-scan.LockScreenWidget";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.justicegaines03.safe-scan.LockScreenWidgetExtension";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
@@ -678,7 +669,7 @@
 			};
 			name = Debug;
 		};
-		E9F1633C2E60D934004A13EA /* Release */ = {
+		E917EF032E679D62009644A8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -691,17 +682,15 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CODE_SIGN_ENTITLEMENTS = LockScreenWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 2Y6R52M323;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = LockScreenWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = LockScreenWidget;
+				INFOPLIST_FILE = LockScreenWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LockScreenWidgetExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -712,13 +701,11 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_FAST_MATH = YES;
-				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.justicegaines03.safe-scan.LockScreenWidget";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.justicegaines03.safe-scan.LockScreenWidgetExtension";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -727,7 +714,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "safescan" */ = {
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "SafeScan" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
@@ -736,7 +723,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "safescan" */ = {
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "SafeScan" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
@@ -745,11 +732,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E9F1633E2E60D934004A13EA /* Build configuration list for PBXNativeTarget "LockScreenWidgetExtension" */ = {
+		E917EF052E679D62009644A8 /* Build configuration list for PBXNativeTarget "LockScreenWidgetExtensionExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				E9F1633B2E60D934004A13EA /* Debug */,
-				E9F1633C2E60D934004A13EA /* Release */,
+				E917EF022E679D62009644A8 /* Debug */,
+				E917EF032E679D62009644A8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -1,16 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Icon-Light.png",
+      "filename" : "Icon-Monochrome-64.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Icon-Dark.png",
+      "filename" : "Icon-Monochrome-128.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
+      "filename" : "Icon-Monochrome-192.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

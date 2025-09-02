@@ -47,9 +47,9 @@ struct LockScreenWidgetEntryView : View {
     var body: some View {
         Link(destination: URL(string: "safescan://")!) {
             HStack(spacing: 8) {
-                Image(systemName: "qrcode.viewfinder")
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(.primary)
+                Image("WidgetLogo")
+                    .resizable()
+                    .frame(width: 36, height: 36)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("SafeScan")
@@ -60,7 +60,7 @@ struct LockScreenWidgetEntryView : View {
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 4)
             .padding(.vertical, 6)
         }
     }
