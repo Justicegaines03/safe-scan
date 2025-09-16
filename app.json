@@ -9,7 +9,6 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "description": "SafeScan is a powerful QR code security scanner that uses VirusTotal API and community intelligence to protect you from malicious links and unsafe content.",
-    "privacy": "public",
     "platforms": [
       "ios",
       "android"
@@ -53,26 +52,6 @@
             "android.intent.category.BROWSABLE",
             "android.intent.category.DEFAULT"
           ]
-        }
-      ],
-      "shortcuts": [
-        {
-          "id": "scan-qr-code",
-          "shortLabel": "Scan QR Code",
-          "longLabel": "Scan QR Code for Security",
-          "icon": "./assets/images/Icon-Light.png",
-          "data": {
-            "url": "safescan://scan-qr"
-          }
-        },
-        {
-          "id": "quick-scan",
-          "shortLabel": "Quick Scan",
-          "longLabel": "Quick Security Scan",
-          "icon": "./assets/images/Icon-Light.png",
-          "data": {
-            "url": "safescan://quick-scan"
-          }
         }
       ]
     },
