@@ -1636,7 +1636,13 @@ export default function ScanHistoryScreen() {
               return null;
             })()}
             <TouchableOpacity
-              style={styles.historyActionButton}
+              style={[
+                styles.historyActionButton,
+                { 
+                  backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#FFFFFF',
+                  borderColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+                }
+              ]}
               onPress={handleRate}
               activeOpacity={0.7}
             >
@@ -1647,7 +1653,10 @@ export default function ScanHistoryScreen() {
                 tintColor="#2672ffff"
                 fallback={<ThemedText style={styles.historyActionButtonIcon}>★</ThemedText>}
               />
-              <Text style={styles.historyActionButtonText}>Rate</Text>
+              <Text style={[
+                styles.historyActionButtonText,
+                { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }
+              ]}>Rate</Text>
             </TouchableOpacity>
 
             {/* Open Link Button */}
@@ -1656,7 +1665,13 @@ export default function ScanHistoryScreen() {
               return null;
             })()}
             <TouchableOpacity
-              style={styles.historyActionButton}
+              style={[
+                styles.historyActionButton,
+                { 
+                  backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#FFFFFF',
+                  borderColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+                }
+              ]}
               onPress={handleOpenLink}
               activeOpacity={0.7}
             >
@@ -1667,7 +1682,10 @@ export default function ScanHistoryScreen() {
                   tintColor="#00AA00"
                   fallback={<ThemedText style={styles.historyActionButtonIcon}>↗</ThemedText>}
                 />
-                <Text style={styles.historyActionButtonText}>Open</Text>
+                <Text style={[
+                  styles.historyActionButtonText,
+                  { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }
+                ]}>Open</Text>
               </TouchableOpacity>
           </View>
         )}
@@ -2505,14 +2523,9 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#D4D4D4',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    borderWidth: 2,
   },
   historyActionButtonIcon: {
     fontSize: 18,
@@ -2521,7 +2534,6 @@ const styles = StyleSheet.create({
   historyActionButtonText: {
     fontSize: 8,
     fontWeight: '600',
-    color: '#333333',
     marginTop: 1,
   },
   topStatusContainer: {
