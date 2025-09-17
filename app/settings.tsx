@@ -512,7 +512,12 @@ export default function SettingsScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <ThemedText style={styles.backButtonText}>Back</ThemedText>
+        </TouchableOpacity>
         <ThemedText style={styles.mainTitle}>Settings</ThemedText>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -745,8 +750,15 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingHorizontal: 16,
   },
-  headerSpacer: {
+  backButton: {
+    padding: 8,
     width: 60,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
   },
   mainTitle: {
     fontSize: 20,
