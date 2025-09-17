@@ -111,17 +111,53 @@ export default function CameraScannerScreen() {
   const [scanCount, setScanCount] = useState(0);
   const [isTabFocused, setIsTabFocused] = useState(true); // Track if this tab is focused
   const [launchedViaShortcut, setLaunchedViaShortcut] = useState(false); // Track shortcut launches
+  const [cameraReady, setCameraReady] = useState(false); // Track camera initialization
   const scanCooldown = useRef(500); // Reduced from 2000ms to 500ms for faster scanning
   const isProcessing = useRef(false); // Immediate flag to prevent duplicate processing
   const isSaving = useRef(false); // Immediate flag to prevent duplicate saves
+  const cameraPreloadTimer = useRef<NodeJS.Timeout | null>(null); // Camera preload timer
 
   const colors = Colors[colorScheme ?? 'light'];
+
+  // Optimized camera props to prevent unnecessary re-renders
+  const scanningCameraProps = useCallback(() => ({
+    style: styles.camera,
+    facing: 'back' as const,
+    onBarcodeScanned: (isScanning && isTabFocused && cameraReady) ? handleQRCodeScanned : undefined,
+    barcodeScannerSettings: { barcodeTypes: ['qr'] as const }
+  }), [isScanning, isTabFocused, cameraReady, handleQRCodeScanned]);
+
+  const resultsCameraProps = useCallback(() => ({
+    style: styles.camera,
+    facing: 'back' as const,
+    onBarcodeScanned: undefined,
+    barcodeScannerSettings: { barcodeTypes: ['qr'] as const }
+  }), []);
 
   useEffect(() => {
     if (!permission?.granted) {
       requestPermission();
+    } else {
+      // Preload camera when permission is available
+      setCameraReady(true);
     }
   }, [permission, requestPermission]);
+
+  // Camera preloading effect - keeps camera "warm"
+  useEffect(() => {
+    if (permission?.granted && isTabFocused) {
+      // Clear any existing timer
+      if (cameraPreloadTimer.current) {
+        clearTimeout(cameraPreloadTimer.current);
+      }
+    }
+    
+    return () => {
+      if (cameraPreloadTimer.current) {
+        clearTimeout(cameraPreloadTimer.current);
+      }
+    };
+  }, [permission?.granted, isTabFocused]);
 
   // Handle deep link launches and shortcut detection
   useEffect(() => {
@@ -250,11 +286,14 @@ export default function CameraScannerScreen() {
 
       checkForResetSignal();
       
-      // Return cleanup function to handle when tab loses focus
-      return () => {
-        console.log('Scanner tab lost focus - disabling camera scanning');
-        setIsTabFocused(false); // Mark tab as not focused
-      };
+      // // Return cleanup function to handle when tab loses focus
+      // return () => {
+      //   console.log('Scanner tab lost focus - preparing for smooth transition');
+      //   // Use setTimeout to prevent jarring immediate state changes
+      //   setTimeout(() => {
+      //     setIsTabFocused(false); // Mark tab as not focused
+      //   }, 50); // Small delay for smoother transition
+      // };
     }, [isScanning, validationResult, showUserRating, userRating, isValidating])
   );
 
@@ -998,14 +1037,16 @@ export default function CameraScannerScreen() {
 
           {/* Camera background */}
           <View style={styles.cameraContainer}>
-            <CameraView
-              style={styles.camera}
-              facing="back"
-              onBarcodeScanned={undefined} // Disable scanning while showing results
-              barcodeScannerSettings={{
-                barcodeTypes: ['qr'],
-              }}
-            />
+            {cameraReady ? (
+              <CameraView
+                {...resultsCameraProps()}
+              />
+            ) : (
+              <View style={[styles.camera, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#00E676" />
+                <ThemedText style={{ color: '#fff', marginTop: 10 }}>Initializing camera...</ThemedText>
+              </View>
+            )}
             
             {/* Camera darkening overlay - positioned absolutely */}
             <View style={styles.cameraDarkenOverlay} />
@@ -1367,14 +1408,16 @@ export default function CameraScannerScreen() {
 
         {/* Camera and scanner */}
         <View style={styles.cameraContainer}>
-          <CameraView
-            style={styles.camera}
-            facing="back"
-            onBarcodeScanned={isScanning && isTabFocused ? handleQRCodeScanned : undefined}
-            barcodeScannerSettings={{
-              barcodeTypes: ['qr'],
-            }}
-          />
+          {cameraReady ? (
+            <CameraView
+              {...scanningCameraProps()}
+            />
+          ) : (
+            <View style={[styles.camera, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
+              <ActivityIndicator size="large" color="#00E676" />
+              <ThemedText style={{ color: '#fff', marginTop: 10 }}>Initializing camera...</ThemedText>
+            </View>
+          )}
           
           {/* Overlay - positioned absolutely */}
           <View style={styles.overlay}>
