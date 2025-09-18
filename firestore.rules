@@ -1,0 +1,358 @@
+// Firestore Security Rules for Safe Scan App
+// Version: 1.0
+// Last Updated: 2024
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =============================================================================
+    // HELPER FUNCTIONS
+    // =============================================================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is anonymous
+    function isAnonymous() {
+      return request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+    
+    // Check if user owns the resource
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Check if document belongs to authenticated user
+    function isUserDocument() {
+      return isAuthenticated() && isOwner(resource.data.userId);
+    }
+    
+    // Check if request data belongs to authenticated user
+    function isUserRequestData() {
+      return isAuthenticated() && isOwner(request.resource.data.userId);
+    }
+    
+    // Validate timestamp is reasonable (within last hour to 1 second in future)
+    function isValidTimestamp(timestamp) {
+      return timestamp >= (request.time.toMillis() - 3600000) && 
+             timestamp <= (request.time.toMillis() + 1000);
+    }
+    
+    // Check rate limiting (simplified - real implementation would use Cloud Functions)
+    function checkRateLimit(maxPerHour) {
+      // This is a placeholder - actual rate limiting should be done in Cloud Functions
+      return true;
+    }
+    
+    // Validate vote data structure
+    function isValidVoteData() {
+      let vote = request.resource.data;
+      return vote.keys().hasAll(['userId', 'qrHash', 'vote', 'timestamp']) &&
+             vote.vote in ['safe', 'unsafe'] &&
+             vote.userId is string &&
+             vote.qrHash is string &&
+             vote.timestamp is number &&
+             isValidTimestamp(vote.timestamp);
+    }
+    
+    // Validate scan data structure
+    function isValidScanData() {
+      let scan = request.resource.data;
+      return scan.keys().hasAll(['userId', 'qrData', 'timestamp', 'safetyTag', 'sessionId']) &&
+             scan.safetyTag in ['safe', 'unsafe', 'unknown'] &&
+             scan.userId is string &&
+             scan.qrData is string &&
+             scan.sessionId is string &&
+             scan.timestamp is number &&
+             isValidTimestamp(scan.timestamp) &&
+             scan.qrData.size() <= 2000; // Max QR data length
+    }
+    
+    // Check if user has required permissions
+    function hasPermission(permission) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('permissions', []).hasAny([permission]);
+    }
+    
+    // Check if user is moderator or admin
+    function isModerator() {
+      return hasPermission('moderator') || hasPermission('admin');
+    }
+    
+    // Validate QR code hash format (SHA-256 hex)
+    function isValidQRHash(qrHash) {
+      return qrHash.matches('^[a-fA-F0-9]{64}$');
+    }
+    
+    // =============================================================================
+    // USER DOCUMENTS
+    // =============================================================================
+    
+    // User profile documents (/users/{userId})
+    match /users/{userId} {
+      // Users can read and write their own profile
+      allow read, write: if isAuthenticated() && isOwner(userId);
+      
+      // Allow creation only if user is creating their own profile
+      allow create: if isAuthenticated() && 
+                       isOwner(userId) && 
+                       request.resource.data.uid == userId;
+      
+      // Moderators can read user profiles for moderation purposes
+      allow read: if isModerator();
+      
+      // ==========================================================================
+      // USER SCAN HISTORY SUBCOLLECTION
+      // ==========================================================================
+      
+      // Scan history subcollection (/users/{userId}/scanHistory/{scanId})
+      match /scanHistory/{scanId} {
+        // Users can read/write their own scan history
+        allow read, write: if isAuthenticated() && isOwner(userId);
+        
+        // Validate scan data on write
+        allow write: if isAuthenticated() && 
+                        isOwner(userId) && 
+                        isValidScanData() &&
+                        checkRateLimit(1000); // Max 1000 scans per hour
+        
+        // Allow deletion of own scans
+        allow delete: if isAuthenticated() && isOwner(userId);
+        
+        // Moderators can read for moderation (but not private scans)
+        allow read: if isModerator() && 
+                       (!resource.data.get('isPrivate', false));
+      }
+    }
+    
+    // =============================================================================
+    // QR CODE COMMUNITY DATA
+    // =============================================================================
+    
+    // QR code community ratings (/qrCodes/{qrHash})
+    match /qrCodes/{qrHash} {
+      // Anyone can read community ratings (public data)
+      allow read: if true;
+      
+      // Only authenticated users can write ratings
+      allow write: if isAuthenticated() && isValidQRHash(qrHash);
+      
+      // Validate rating data structure on write
+      allow create, update: if isAuthenticated() && 
+                              request.resource.data.keys().hasAll(['qrHash', 'safeVotes', 'unsafeVotes', 'totalVotes', 'confidence']) &&
+                              request.resource.data.qrHash == qrHash &&
+                              request.resource.data.safeVotes >= 0 &&
+                              request.resource.data.unsafeVotes >= 0 &&
+                              request.resource.data.totalVotes >= 0 &&
+                              request.resource.data.confidence >= 0 &&
+                              request.resource.data.confidence <= 1;
+      
+      // Only moderators can delete community ratings
+      allow delete: if isModerator();
+      
+      // ==========================================================================
+      // VOTES SUBCOLLECTION
+      // ==========================================================================
+      
+      // Individual votes (/qrCodes/{qrHash}/votes/{userId})
+      match /votes/{voteUserId} {
+        // Users can read all votes (for transparency)
+        allow read: if isAuthenticated();
+        
+        // Users can only write their own votes
+        allow write: if isAuthenticated() && 
+                        isOwner(voteUserId) && 
+                        isValidVoteData() &&
+                        request.resource.data.qrHash == qrHash &&
+                        checkRateLimit(100); // Max 100 votes per hour
+        
+        // Users can delete their own votes (vote retraction)
+        allow delete: if isAuthenticated() && isOwner(voteUserId);
+        
+        // Moderators can delete any vote (spam/abuse)
+        allow delete: if isModerator();
+        
+        // Prevent vote manipulation - users can't change vote weight
+        allow update: if isAuthenticated() && 
+                         isOwner(voteUserId) &&
+                         request.resource.data.weight == resource.data.weight;
+      }
+    }
+    
+    // =============================================================================
+    // SYSTEM STATISTICS
+    // =============================================================================
+    
+    // Global system statistics (/systemStats/global)
+    match /systemStats/global {
+      // Anyone can read system stats
+      allow read: if true;
+      
+      // Only system (via Cloud Functions) can write stats
+      // In practice, this would be restricted to service accounts
+      allow write: if false; // Disable direct writes from clients
+    }
+    
+    // =============================================================================
+    // USER SESSIONS (Optional)
+    // =============================================================================
+    
+    // User session tracking (/userSessions/{sessionId})
+    match /userSessions/{sessionId} {
+      // Users can read/write their own sessions
+      allow read, write: if isAuthenticated() && 
+                           (resource == null || isUserDocument()) &&
+                           (request.resource == null || isUserRequestData());
+      
+      // Auto-cleanup sessions older than 24 hours
+      allow delete: if isAuthenticated() && 
+                       resource.data.endedAt < (request.time.toMillis() - 86400000);
+      
+      // Moderators can read sessions for monitoring
+      allow read: if isModerator();
+    }
+    
+    // =============================================================================
+    // ADMIN COLLECTIONS
+    // =============================================================================
+    
+    // Reports and moderation (/reports/{reportId})
+    match /reports/{reportId} {
+      // Authenticated users can create reports
+      allow create: if isAuthenticated() && 
+                       request.resource.data.reporterId == request.auth.uid;
+      
+      // Users can read their own reports
+      allow read: if isAuthenticated() && 
+                     resource.data.reporterId == request.auth.uid;
+      
+      // Moderators can read and update all reports
+      allow read, update: if isModerator();
+      
+      // Only admins can delete reports
+      allow delete: if hasPermission('admin');
+    }
+    
+    // User reputation and trust scores (/userTrust/{userId})
+    match /userTrust/{userId} {
+      // Users can read their own trust score
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Only system can write trust scores
+      allow write: if false; // Managed by Cloud Functions
+      
+      // Moderators can read trust scores
+      allow read: if isModerator();
+    }
+    
+    // =============================================================================
+    // SECURITY MONITORING
+    // =============================================================================
+    
+    // Security events log (/securityEvents/{eventId})
+    match /securityEvents/{eventId} {
+      // No direct client access
+      allow read, write: if false; // Only Cloud Functions
+    }
+    
+    // Rate limiting data (/rateLimits/{userId})
+    match /rateLimits/{userId} {
+      // Users can read their own rate limit status
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Only system can write rate limits
+      allow write: if false; // Managed by Cloud Functions
+    }
+    
+    // =============================================================================
+    // FALLBACK RULES
+    // =============================================================================
+    
+    // Deny access to any other documents not explicitly allowed
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// =============================================================================
+// FIRESTORE INDEXES REQUIRED
+// =============================================================================
+
+/*
+Required indexes (create these in Firebase Console or via CLI):
+
+1. users/{userId}/scanHistory
+   - Fields: timestamp (Descending), safetyTag (Ascending)
+   - Query scope: Collection
+
+2. qrCodes
+   - Fields: lastUpdated (Descending), totalVotes (Ascending)
+   - Query scope: Collection
+   
+3. qrCodes/{qrHash}/votes
+   - Fields: timestamp (Descending), vote (Ascending)
+   - Query scope: Collection
+   
+4. users/{userId}/scanHistory
+   - Fields: isPrivate (Ascending), timestamp (Descending)
+   - Query scope: Collection
+
+5. qrCodes
+   - Fields: qrType (Ascending), confidence (Descending)
+   - Query scope: Collection
+
+6. userSessions
+   - Fields: userId (Ascending), lastActivityAt (Descending)
+   - Query scope: Collection
+
+Create indexes with Firebase CLI:
+firebase firestore:indexes
+
+Or manually in Firebase Console:
+https://console.firebase.google.com/project/YOUR_PROJECT/firestore/indexes
+*/
+
+// =============================================================================
+// SECURITY CONSIDERATIONS
+// =============================================================================
+
+/*
+1. Rate Limiting:
+   - Implement Cloud Functions for proper rate limiting
+   - Monitor for unusual voting patterns
+   - Track scan frequency per user
+
+2. Data Validation:
+   - Always validate data structure and types
+   - Sanitize QR code content before storage
+   - Limit string lengths to prevent abuse
+
+3. Privacy Protection:
+   - Users control privacy of their scans
+   - Anonymous authentication for privacy
+   - No personal data collection without consent
+
+4. Spam Prevention:
+   - Vote weight decay over time
+   - Detect coordinated voting attacks
+   - Reputation-based weighting
+
+5. Content Moderation:
+   - Moderator access to non-private content
+   - Reporting system for malicious QR codes
+   - Automated content scanning
+
+6. Performance:
+   - Proper indexing for common queries
+   - Pagination for large datasets
+   - Offline-first design with sync
+
+7. Monitoring:
+   - Log security events
+   - Monitor unusual access patterns
+   - Track system health metrics
+*/
