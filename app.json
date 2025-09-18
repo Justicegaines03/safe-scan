@@ -14,8 +14,9 @@
       "android"
     ],
     "ios": {
-      "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "bundleIdentifier": "com.justicegaines03.safe-scan",
+      "supportsTablet": true,
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "SafeScan needs camera access to scan QR codes for security analysis.",
@@ -40,6 +41,8 @@
         "backgroundColor": "#2E7D32",
         "monochromeImage": "./assets/images/Icon-Dark.png"
       },
+      "googleServicesFile": "./google-services.json",
+      "package": "com.mycorp.myapp",
       "intentFilters": [
         {
           "action": "android.intent.action.VIEW",
@@ -74,7 +77,17 @@
             "backgroundColor": "#174534"
           }
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-firebase/crashlytics",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
     ],
     "experiments": {
       "typedRoutes": true
