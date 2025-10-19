@@ -88,6 +88,7 @@
             "useFrameworks": "static"
           }
         }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

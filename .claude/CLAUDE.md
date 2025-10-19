@@ -11,7 +11,7 @@
 ## Project Config
 
 LEARN THIS Information about the safe-scan mobile app project.
-~/.claude/context/projects/safe-scan/CLAUDE.md
+~/.claude/context/projects/safe-scan/README.md
 
 ## Mobile Development
 
@@ -42,3 +42,7 @@ YOU MUST USE THE DEVELOPER AGENT TO DO YOUR WORK
 YOU MUST Use this agent to do all mobile development tasks: ~/claude/agents/developer.md
 
 YOU MUST Use this agent to do all security analysis tasks: ~/claude/agents/developer.md
+
+## Safe-Scan Project
+
+This app uses JSX for front-end and Google Firestore for backend
