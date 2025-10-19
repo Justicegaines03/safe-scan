@@ -7,7 +7,7 @@ import { SymbolView } from 'expo-symbols';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
-import { userIdentityService } from '@/services/UserIdentityService';
+import { userIdentityService } from '@/infrastructure/UserIdentityService';
 
 interface ScanHistoryEntry {
   id: string;

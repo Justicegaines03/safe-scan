@@ -1,11 +1,11 @@
 /**
- * Services Index
- * Exports all backend infrastructure services
+ * Infrastructure Layer Index
+ * Exports all infrastructure services and adapters
  */
 
 export * from './types';
 
-// Existing services
+// Legacy services (to be removed in Phase 1)
 export { LocalStorageService } from './LocalStorageService';
 export { CloudSyncService } from './CloudSyncService';
 export { CommunityDatabaseService } from './CommunityDatabaseService';
@@ -15,7 +15,7 @@ export { ErrorHandlingService } from './ErrorHandlingService';
 export { BackendInfrastructureService, backendInfrastructure } from './BackendInfrastructureService';
 export { UserIdentityService, userIdentityService } from './UserIdentityService';
 
-// New Firebase services
+// Firebase services
 export { FirestoreService, firestoreService } from './FirestoreService';
 export { FirebaseAuthService, firebaseAuthService } from './FirebaseAuthService';
 export { FirebaseScanHistoryService, firebaseScanHistoryService } from './FirebaseScanHistoryService';
@@ -24,3 +24,6 @@ export { FirebaseRealtimeService, firebaseRealtimeService } from './FirebaseReal
 
 // Firebase schema and configuration
 export * from './FirestoreSchema';
+
+// Infrastructure adapters (implement Application layer interfaces)
+export * from './adapters';

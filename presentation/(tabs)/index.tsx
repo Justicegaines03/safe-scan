@@ -42,8 +42,8 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { SymbolView } from 'expo-symbols';
 import Constants from 'expo-constants';
-import { backendInfrastructure } from '@/services';
-import { userIdentityService } from '@/services/UserIdentityService';
+import { backendInfrastructure } from '@/infrastructure';
+import { userIdentityService } from '@/infrastructure/UserIdentityService';
 
 
 // Simple hash function that works in React Native for the  Web Crypto API

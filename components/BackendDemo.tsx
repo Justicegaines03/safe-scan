@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, Alert } from 'react-native';
-import { backendInfrastructure, UserScanData } from '../services';
+import { backendInfrastructure, UserScanData } from '../infrastructure';
 
 const BackendDemo = () => {
   const [systemHealth, setSystemHealth] = useState<any>(null);

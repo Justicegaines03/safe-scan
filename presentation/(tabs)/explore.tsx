@@ -22,8 +22,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { backendInfrastructure } from '@/services';
-import { userIdentityService } from '@/services/UserIdentityService';
+import { backendInfrastructure } from '@/infrastructure';
+import { userIdentityService } from '@/infrastructure/UserIdentityService';
 
 // Types
 interface ScanHistoryEntry {
